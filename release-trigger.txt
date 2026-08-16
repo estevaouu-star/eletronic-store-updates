@@ -1,1 +1,1 @@
-Publicar Eletromix 10.6.2: corrigir a posição do botão NFC-e para ficar junto das outras abas no menu lateral, com o mesmo tamanho e comportamento visual.
+Publicar Eletromix 10.6.3: remover a coluna NFC-e solta e recriar NFC-e corretamente dentro do menu lateral esquerdo, junto das outras abas.
