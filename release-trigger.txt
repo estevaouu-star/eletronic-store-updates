@@ -1,1 +1,1 @@
-Repetir publicação Eletromix 10.2.0 após correção de tipos de pagamento.
+Publicar Eletromix 10.3.0: corrigir digitação no pagamento e adicionar filtro de produtos faltando informação.
