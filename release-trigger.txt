@@ -1,1 +1,1 @@
-Publicar Eletromix 10.7.1: visual renovado, topo somente Eletromix e versão instalada/disponível visível ao lado do atualizador.
+Publicar Eletromix 10.7.2: Produtos e Serviços lado a lado no Caixa e ajuste rápido de estoque para qualquer usuário quando o produto estiver zerado.
