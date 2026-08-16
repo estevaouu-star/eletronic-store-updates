@@ -1,1 +1,1 @@
-Publicar Eletromix 10.7.4: personalização por loja, logos separadas, novo ícone e temas vermelho/preto.
+Reenviar Eletromix 10.7.4 com correção do ícone 256x256 para concluir a geração do instalador.
