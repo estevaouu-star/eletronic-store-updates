@@ -1,1 +1,1 @@
-inspect 2026-08-16 19:42 backend-personalizacao
+inspect 2026-08-16 19:44 troca-loja-personalizacao
