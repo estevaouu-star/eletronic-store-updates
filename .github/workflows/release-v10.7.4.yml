@@ -1,0 +1,54 @@
+name: Publicar Eletromix 10.7.4
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.7.4-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: |
+          if (Test-Path app) { Remove-Item app -Recurse -Force }
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar atualizações
+        shell: pwsh
+        run: |
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+      - name: Verificar JavaScript
+        run: node --check app/public/app.js
+      - name: Instalar dependências
+        working-directory: app
+        run: npm install
+      - name: Compilar backend
+        working-directory: app
+        run: npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar Release 10.7.4
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "v10.7.4" --yes 2>$null
+          git push origin --delete "v10.7.4" 2>$null
+          gh release create "v10.7.4" --target main --title "Eletromix 10.7.4 - Personalização por loja" --notes "Personalização isolada por loja, logo do sistema e logo do comprovante independentes, novo ícone do aplicativo e novas predefinições com foco em vermelho e preto."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.4" $_.FullName --clobber }
