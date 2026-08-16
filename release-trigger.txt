@@ -1,1 +1,1 @@
-Publicar Eletromix 10.2.0 com nova tela de pagamento e cálculo de troco.
+Repetir publicação Eletromix 10.2.0 após correção de tipos de pagamento.
