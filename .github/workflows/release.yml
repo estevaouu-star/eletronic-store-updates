@@ -39,6 +39,8 @@ jobs:
         run: python scripts/apply-v10.6.2.py
       - name: Aplicar correção 10.6.3
         run: python scripts/apply-v10.6.3.py
+      - name: Aplicar correção estrutural 10.6.4
+        run: python scripts/apply-v10.6.4.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
@@ -52,12 +54,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.6.3
+      - name: Publicar Release 10.6.4
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.6.3" --yes 2>$null
-          git push origin --delete "v10.6.3" 2>$null
-          gh release create "v10.6.3" --target main --title "Eletromix 10.6.3 - Menu NFC-e corrigido" --notes "Corrige definitivamente o posicionamento da NFC-e: remove qualquer botão solto que estava criando uma coluna no meio da tela e recria NFC-e como um item normal dentro do menu lateral esquerdo, junto das demais abas. A página NFC-e continua isolada e só aparece quando selecionada."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.6.3" $_.FullName --clobber }
+          gh release delete "v10.6.4" --yes 2>$null
+          git push origin --delete "v10.6.4" 2>$null
+          gh release create "v10.6.4" --target main --title "Eletromix 10.6.4 - Aba NFC-e no menu lateral" --notes "Correção estrutural da interface: remove qualquer botão NFC-e fora da barra lateral e insere NFC-e diretamente dentro do aside/menu lateral existente, junto das demais abas. O conteúdo NFC-e continua isolado e só é exibido quando selecionado."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.6.4" $_.FullName --clobber }
