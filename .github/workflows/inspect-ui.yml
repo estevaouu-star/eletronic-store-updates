@@ -1,0 +1,26 @@
+name: Inspecionar estrutura UI
+on:
+  push:
+    branches: [main]
+    paths: ['inspect-trigger.txt']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair base e aplicar ate 10.5
+        run: |
+          unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+      - name: Mostrar estrutura relevante
+        run: |
+          echo '=== INDEX NAV/PAGES ==='
+          grep -nE 'nav-item|data-page|class="page|id="page-|<aside|</aside>|<main|</main>' app/public/index.html | head -n 260
+          echo '=== APP ROUTING ==='
+          grep -nE 'data-page|querySelectorAll\(.page|classList.*active|page-' app/public/app.js | head -n 260
