@@ -22,13 +22,11 @@ jobs:
           python scripts/apply-v10.7.1.py
           python scripts/apply-v10.7.2.py
           python scripts/apply-v10.7.3.py
-      - name: Mostrar personalizacao e logos
+      - name: Mostrar logica completa de aparencia
         run: |
-          echo '=== PERSONALIZACAO HTML ==='
-          grep -n -A90 -B10 'id="personalizacao"' app/public/index.html || true
-          echo '=== LOGOS / APARENCIA JS ==='
-          grep -niE 'logoDataUrl|aparencia|personaliza|tema|preset|corPrimaria|accent|logo' app/public/app.js | head -n 320 || true
-          echo '=== PERSONALIZACAO CSS ==='
-          grep -niE 'personal|theme|tema|preset|swatch|color|accent|logo' app/public/style.css | head -n 320 || true
-          echo '=== PACKAGE BUILD ICON ==='
-          cat app/package.json
+          echo '=== JS APARENCIA 55-145 ==='
+          sed -n '55,145p' app/public/app.js
+          echo '=== SERVER APARENCIA ==='
+          grep -niE -A35 -B15 'api/aparencia|aparencia:' app/src/server.ts | head -n 240 || true
+          echo '=== ELECTRON MAIN ICON ==='
+          grep -niE -A15 -B10 'BrowserWindow|icon:' app/electron/main.cjs | head -n 180 || true
