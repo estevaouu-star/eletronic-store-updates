@@ -1,1 +1,1 @@
-Publicar Eletromix 10.3.0: corrigir digitação no pagamento e adicionar filtro de produtos faltando informação.
+Publicar Eletromix 10.4.0: excluir vendas canceladas, dados completos opcionais do cliente no comprovante e Dashboard de Pendências.
