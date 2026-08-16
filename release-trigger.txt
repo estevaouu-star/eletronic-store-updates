@@ -1,1 +1,1 @@
-Preparação da publicação 10.1.0 com pagamento misto.
+Publicar Eletromix 10.2.0 com nova tela de pagamento e cálculo de troco.
