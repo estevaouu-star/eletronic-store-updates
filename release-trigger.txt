@@ -1,1 +1,1 @@
-Publicar Eletromix 10.6.4: correção estrutural final para inserir NFC-e diretamente dentro do menu lateral existente e eliminar a coluna solta.
+Publicar Eletromix 10.7.0: reconstrução limpa desde a 10.5, removendo os patches 10.6.x, com NFC-e dentro de Configurações e interface refinada.
