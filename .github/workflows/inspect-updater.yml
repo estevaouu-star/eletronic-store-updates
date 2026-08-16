@@ -1,0 +1,27 @@
+name: Inspecionar updater 10.7
+on:
+  push:
+    branches: [main]
+    paths: ['inspect-updater-trigger.txt']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar app 10.7
+        run: |
+          unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+      - name: Procurar marca e updater
+        run: |
+          echo '=== SUBTITULO ==='
+          grep -Rni --exclude-dir=node_modules -E 'Gestão inteligente|Gestao inteligente|ELETROMIX|Eletromix' app/public app/electron app/src app/package.json | head -n 180 || true
+          echo '=== UPDATER ==='
+          grep -Rni --exclude-dir=node_modules -E 'update|Atualiza|autoUpdater|version|versão|versao' app/electron app/public app/src app/package.json | head -n 320 || true
