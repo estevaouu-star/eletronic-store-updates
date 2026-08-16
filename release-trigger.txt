@@ -1,1 +1,1 @@
-Publicar Eletromix 10.5.0 com as melhorias da 10.4.0 e crédito parcelado de 1x a 12x.
+Publicar Eletromix 10.6.0: módulo NFC-e separado em homologação, com configuração fiscal e validação de prontidão, sem simular autorização SEFAZ.
