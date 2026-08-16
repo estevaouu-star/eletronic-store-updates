@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extrair base e aplicar ate 10.5
+      - name: Extrair base e aplicar ate 10.7
         run: |
           unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
           python scripts/apply-v10.2.py
@@ -18,11 +18,16 @@ jobs:
           python scripts/apply-v10.3.py
           python scripts/apply-v10.4.py
           python scripts/apply-v10.5.py
-      - name: Mostrar estrutura relevante
+          python scripts/apply-v10.7.py
+      - name: Mostrar header, atualizador e estilos
         run: |
-          echo '=== ASIDE / INICIO MAIN ==='
-          sed -n '15,90p' app/public/index.html
-          echo '=== SECTIONS ==='
-          grep -nE 'class="section|id="[^"]+" class="section|<section' app/public/index.html | head -n 120
-          echo '=== APP ROUTING ==='
-          sed -n '970,1005p' app/public/app.js
+          echo '=== HEADER ==='
+          sed -n '1,45p' app/public/index.html
+          echo '=== CONFIG ==='
+          sed -n '270,360p' app/public/index.html
+          echo '=== UPDATE REFERENCES HTML ==='
+          grep -niE 'atualiz|update|vers[aã]o|version|gest[aã]o inteligente|Eletromix' app/public/index.html | head -n 160 || true
+          echo '=== UPDATE REFERENCES JS ==='
+          grep -niE 'atualiz|update|vers[aã]o|version|latest|electron|ipc' app/public/app.js | head -n 220 || true
+          echo '=== STYLE HEAD/HEADER ==='
+          grep -niE 'header|brand|logo|update|version|topbar|card|nav|section|body|main' app/public/style.css | head -n 260 || true
