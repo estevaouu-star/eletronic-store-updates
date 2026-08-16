@@ -1,1 +1,1 @@
-Publicar Eletromix 10.6.1: corrigir a interface para que a NFC-e apareça somente na aba NFC-e e nunca nas outras páginas.
+Publicar Eletromix 10.6.2: corrigir a posição do botão NFC-e para ficar junto das outras abas no menu lateral, com o mesmo tamanho e comportamento visual.
