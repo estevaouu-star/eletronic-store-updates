@@ -1,1 +1,1 @@
-Publicar Eletromix 10.6.3: remover a coluna NFC-e solta e recriar NFC-e corretamente dentro do menu lateral esquerdo, junto das outras abas.
+Publicar Eletromix 10.6.4: correção estrutural final para inserir NFC-e diretamente dentro do menu lateral existente e eliminar a coluna solta.
