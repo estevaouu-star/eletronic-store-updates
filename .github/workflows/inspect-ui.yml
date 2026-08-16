@@ -22,11 +22,11 @@ jobs:
           python scripts/apply-v10.7.1.py
           python scripts/apply-v10.7.2.py
           python scripts/apply-v10.7.3.py
-      - name: Mostrar logica completa de aparencia
+      - name: Mostrar troca de loja e aparência
         run: |
-          echo '=== JS APARENCIA 55-145 ==='
-          sed -n '55,145p' app/public/app.js
-          echo '=== SERVER APARENCIA ==='
-          grep -niE -A35 -B15 'api/aparencia|aparencia:' app/src/server.ts | head -n 240 || true
-          echo '=== ELECTRON MAIN ICON ==='
-          grep -niE -A15 -B10 'BrowserWindow|icon:' app/electron/main.cjs | head -n 180 || true
+          echo '=== LOJA / TROCA DE LOJA ==='
+          grep -niE 'lojaId|storeSelect|lojaSelect|select.*loja|lojaAtual|currentStore|X-Store-Id|loadLojas' app/public/app.js | head -n 260 || true
+          echo '=== HTML HEADER LOJA ==='
+          grep -niE -A8 -B8 'loja|store' app/public/index.html | head -n 180 || true
+          echo '=== TIPO APARENCIA ==='
+          grep -niE -A30 -B10 'type Aparencia|interface Aparencia' app/src/server.ts | head -n 120 || true
