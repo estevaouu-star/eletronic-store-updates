@@ -30,6 +30,12 @@ jobs:
           python scripts/apply-v10.7.2.py
           python scripts/apply-v10.7.3.py
           python scripts/apply-v10.7.4.py
+      - name: Corrigir ícone 256px do aplicativo
+        shell: pwsh
+        run: |
+          $raw = (Get-Content "assets/eletromix-icon-256.b64" -Raw).Trim()
+          [IO.File]::WriteAllBytes("app/electron/assets/icon.png", [Convert]::FromBase64String($raw))
+          python -c "import json; p='app/package.json'; d=json.load(open(p,encoding='utf-8')); d['build']['win']['icon']='electron/assets/icon.png'; open(p,'w',encoding='utf-8').write(json.dumps(d,indent=2,ensure_ascii=False))"
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
