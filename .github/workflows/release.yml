@@ -33,6 +33,8 @@ jobs:
         run: python scripts/fix-v10.6-patch.py
       - name: Aplicar atualização 10.6.0
         run: python scripts/apply-v10.6.py
+      - name: Aplicar correção 10.6.1
+        run: python scripts/apply-v10.6.1.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
@@ -46,12 +48,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.6.0
+      - name: Publicar Release 10.6.1
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.6.0" --yes 2>$null
-          git push origin --delete "v10.6.0" 2>$null
-          gh release create "v10.6.0" --target main --title "Eletromix 10.6.0 - Módulo NFC-e Homologação" --notes "Adiciona uma aba NFC-e separada do PDV normal, com configuração fiscal da empresa, CSC/ID, regime tributário, série, validação de prontidão, identificação de produtos com dados fiscais pendentes e validação prévia de vendas. Por segurança fiscal, esta versão NÃO transmite nem simula autorização da SEFAZ: a transmissão real será habilitada somente após certificado digital, schemas/assinatura/QR Code e comunicação oficial estarem integrados e testados em homologação."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.6.0" $_.FullName --clobber }
+          gh release delete "v10.6.1" --yes 2>$null
+          git push origin --delete "v10.6.1" 2>$null
+          gh release create "v10.6.1" --target main --title "Eletromix 10.6.1 - Correção da aba NFC-e" --notes "Corrige a interface do módulo NFC-e para que ele apareça somente quando a aba NFC-e estiver selecionada. As demais telas do Eletromix voltam a exibir apenas o próprio conteúdo."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.6.1" $_.FullName --clobber }
