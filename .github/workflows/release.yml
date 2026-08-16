@@ -31,6 +31,8 @@ jobs:
         run: python scripts/apply-v10.5.py
       - name: Aplicar atualização limpa 10.7.0
         run: python scripts/apply-v10.7.py
+      - name: Aplicar refinamento 10.7.1
+        run: python scripts/apply-v10.7.1.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
@@ -44,12 +46,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.7.0
+      - name: Publicar Release 10.7.1
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.7.0" --yes 2>$null
-          git push origin --delete "v10.7.0" 2>$null
-          gh release create "v10.7.0" --target main --title "Eletromix 10.7.0 - Interface refinada e NFC-e nas Configurações" --notes "Reconstrução limpa a partir da 10.5, descartando as tentativas 10.6.x que causavam problemas visuais. O NFC-e agora fica dentro de Configurações, sem criar nova coluna ou seção solta no Caixa. Também melhora cartões, botões, campos, navegação e organização visual do sistema. Mantém pagamento parcelado, pagamento misto, exclusão de venda cancelada, dados completos de cliente, produtos faltando informação e dashboard de pendências. A parte NFC-e continua em homologação, sem simular autorização fiscal."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.0" $_.FullName --clobber }
+          gh release delete "v10.7.1" --yes 2>$null
+          git push origin --delete "v10.7.1" 2>$null
+          gh release create "v10.7.1" --target main --title "Eletromix 10.7.1 - Visual renovado e versão no atualizador" --notes "Melhoria visual mais ampla do Eletromix: cabeçalho, menu lateral, cartões, campos, botões, tabelas, modais e detalhes de navegação foram refinados. Remove o texto 'Gestão inteligente para sua loja' do topo e mantém apenas Eletromix. O atualizador agora mostra a versão instalada e, quando houver atualização, exibe também a nova versão disponível ao lado do botão. Mantém a NFC-e dentro de Configurações e todas as funções da 10.7.0."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.1" $_.FullName --clobber }
