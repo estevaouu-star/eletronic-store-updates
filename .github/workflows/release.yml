@@ -35,6 +35,8 @@ jobs:
         run: python scripts/apply-v10.6.py
       - name: Aplicar correção 10.6.1
         run: python scripts/apply-v10.6.1.py
+      - name: Aplicar correção 10.6.2
+        run: python scripts/apply-v10.6.2.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
@@ -48,12 +50,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.6.1
+      - name: Publicar Release 10.6.2
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.6.1" --yes 2>$null
-          git push origin --delete "v10.6.1" 2>$null
-          gh release create "v10.6.1" --target main --title "Eletromix 10.6.1 - Correção da aba NFC-e" --notes "Corrige a interface do módulo NFC-e para que ele apareça somente quando a aba NFC-e estiver selecionada. As demais telas do Eletromix voltam a exibir apenas o próprio conteúdo."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.6.1" $_.FullName --clobber }
+          gh release delete "v10.6.2" --yes 2>$null
+          git push origin --delete "v10.6.2" 2>$null
+          gh release create "v10.6.2" --target main --title "Eletromix 10.6.2 - Correção da aba NFC-e" --notes "Corrige a posição do botão NFC-e para ficar no mesmo menu lateral e com o mesmo tamanho das demais abas do Eletromix. O conteúdo da NFC-e continua aparecendo somente quando essa aba é selecionada."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.6.2" $_.FullName --clobber }
