@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extrair base e aplicar ate 10.7.2
+      - name: Extrair base e aplicar ate 10.7.3
         run: |
           unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
           python scripts/apply-v10.2.py
@@ -21,13 +21,14 @@ jobs:
           python scripts/apply-v10.7.py
           python scripts/apply-v10.7.1.py
           python scripts/apply-v10.7.2.py
-      - name: Mostrar estrutura Caixa e estoque
+          python scripts/apply-v10.7.3.py
+      - name: Mostrar personalizacao e logos
         run: |
-          echo '=== CAIXA HTML ==='
-          sed -n '35,120p' app/public/index.html
-          echo '=== REFERENCIAS LISTAS ==='
-          grep -niE 'listaProdutos|listaServicos|Produtos|Serviços|Servicos' app/public/index.html | head -n 100 || true
-          echo '=== ADD CART / RENDER PRODUTOS ==='
-          grep -niE 'addCart|renderCaixa|render.*Produto|estoque<=0|estoque===0|Sem estoque|Adicionar' app/public/app.js | head -n 220 || true
-          echo '=== ENDPOINT ESTOQUE ==='
-          grep -niE 'produtos/.*/estoque|estoque.*auth|app.post.*estoque' app/src/server.ts | head -n 100 || true
+          echo '=== PERSONALIZACAO HTML ==='
+          grep -n -A90 -B10 'id="personalizacao"' app/public/index.html || true
+          echo '=== LOGOS / APARENCIA JS ==='
+          grep -niE 'logoDataUrl|aparencia|personaliza|tema|preset|corPrimaria|accent|logo' app/public/app.js | head -n 320 || true
+          echo '=== PERSONALIZACAO CSS ==='
+          grep -niE 'personal|theme|tema|preset|swatch|color|accent|logo' app/public/style.css | head -n 320 || true
+          echo '=== PACKAGE BUILD ICON ==='
+          cat app/package.json
