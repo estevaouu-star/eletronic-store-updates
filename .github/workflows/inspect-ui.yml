@@ -20,7 +20,9 @@ jobs:
           python scripts/apply-v10.5.py
       - name: Mostrar estrutura relevante
         run: |
-          echo '=== INDEX NAV/PAGES ==='
-          grep -nE 'nav-item|data-page|class="page|id="page-|<aside|</aside>|<main|</main>' app/public/index.html | head -n 260
+          echo '=== ASIDE / INICIO MAIN ==='
+          sed -n '15,90p' app/public/index.html
+          echo '=== SECTIONS ==='
+          grep -nE 'class="section|id="[^"]+" class="section|<section' app/public/index.html | head -n 120
           echo '=== APP ROUTING ==='
-          grep -nE 'data-page|querySelectorAll\(.page|classList.*active|page-' app/public/app.js | head -n 260
+          sed -n '970,1005p' app/public/app.js
