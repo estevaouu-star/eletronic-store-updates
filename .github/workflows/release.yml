@@ -1,38 +1,41 @@
 name: Publicar atualização Eletromix
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'Eletromix-v10.1.0-source-for-release.zip'
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
   release:
     runs-on: windows-latest
     steps:
-      - name: Baixar versão-base
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Extrair fonte 10.1.0
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "https://github.com/estevaouu-star/eletronic-store-updates/releases/download/v10.0.1/Eletromix-Base-v10.0.1.zip" -OutFile base.zip
-          Expand-Archive base.zip -DestinationPath app
-      - name: Baixar patch
-        uses: actions/checkout@v4
-        with:
-          path: updates
-      - name: Aplicar atualização
-        run: node updates/scripts/apply-update.js app
+          if (Test-Path app) { Remove-Item app -Recurse -Force }
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
       - name: Instalar dependências
         working-directory: app
         run: npm install
-      - name: Gerar instalador e latest.yml
+      - name: Compilar backend
+        working-directory: app
+        run: npm run build
+      - name: Gerar instalador e metadados
         working-directory: app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release
+      - name: Publicar Release 10.1.0
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v10.1.0" --title "Eletromix 10.1.0 — Pagamento misto" --notes "Pagamento dividido entre PIX, Dinheiro, Débito e Crédito. Permite usar de 2 a 4 formas na mesma venda." 2>$null
+          gh release delete "v10.1.0" --yes 2>$null
+          git push origin --delete "v10.1.0" 2>$null
+          gh release create "v10.1.0" --target main --title "Eletromix 10.1.0 - Pagamento misto" --notes "Adiciona pagamento dividido entre PIX, Dinheiro, Débito e Crédito. É possível usar de 2 a 4 formas na mesma venda."
           Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.1.0" $_.FullName --clobber }
