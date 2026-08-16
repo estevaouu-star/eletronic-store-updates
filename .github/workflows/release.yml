@@ -33,6 +33,8 @@ jobs:
         run: python scripts/apply-v10.7.py
       - name: Aplicar refinamento 10.7.1
         run: python scripts/apply-v10.7.1.py
+      - name: Aplicar atualização 10.7.2
+        run: python scripts/apply-v10.7.2.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
@@ -46,12 +48,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.7.1
+      - name: Publicar Release 10.7.2
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.7.1" --yes 2>$null
-          git push origin --delete "v10.7.1" 2>$null
-          gh release create "v10.7.1" --target main --title "Eletromix 10.7.1 - Visual renovado e versão no atualizador" --notes "Melhoria visual mais ampla do Eletromix: cabeçalho, menu lateral, cartões, campos, botões, tabelas, modais e detalhes de navegação foram refinados. Remove o texto 'Gestão inteligente para sua loja' do topo e mantém apenas Eletromix. O atualizador agora mostra a versão instalada e, quando houver atualização, exibe também a nova versão disponível ao lado do botão. Mantém a NFC-e dentro de Configurações e todas as funções da 10.7.0."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.1" $_.FullName --clobber }
+          gh release delete "v10.7.2" --yes 2>$null
+          git push origin --delete "v10.7.2" 2>$null
+          gh release create "v10.7.2" --target main --title "Eletromix 10.7.2 - PDV lado a lado e ajuste rápido de estoque" --notes "No Caixa, Produtos e Serviços passam a ser organizados lado a lado. Ao tentar vender um produto com estoque zerado, o sistema oferece ajuste rápido de estoque diretamente no PDV. O ajuste é liberado para qualquer usuário logado, inclusive vendedor, conforme solicitado. Mantém as melhorias visuais e demais funções da 10.7.1."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.2" $_.FullName --clobber }
