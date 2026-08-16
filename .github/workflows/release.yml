@@ -37,6 +37,8 @@ jobs:
         run: python scripts/apply-v10.7.2.py
       - name: Aplicar correção 10.7.3
         run: python scripts/apply-v10.7.3.py
+      - name: Aplicar personalização 10.7.4
+        run: python scripts/apply-v10.7.4.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
@@ -50,12 +52,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.7.3
+      - name: Publicar Release 10.7.4
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.7.3" --yes 2>$null
-          git push origin --delete "v10.7.3" 2>$null
-          gh release create "v10.7.3" --target main --title "Eletromix 10.7.3 - Correção do Caixa" --notes "Correção efetiva do Caixa: Produtos e Serviços agora ficam realmente lado a lado. Produto com estoque zerado abre ajuste rápido de estoque tanto pelo botão Adicionar quanto pela busca por código/Enter. O ajuste de estoque foi liberado para qualquer usuário logado, inclusive vendedor."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.3" $_.FullName --clobber }
+          gh release delete "v10.7.4" --yes 2>$null
+          git push origin --delete "v10.7.4" 2>$null
+          gh release create "v10.7.4" --target main --title "Eletromix 10.7.4 - Personalização por loja" --notes "Personalização agora é salva separadamente por loja. Adicionadas logos independentes para o topo do sistema e para o comprovante, novo ícone oficial do Eletromix e mais predefinições focadas em vermelho, preto, vermelho forte, vinho e grafite. Mantém as correções do Caixa da 10.7.3."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.4" $_.FullName --clobber }
