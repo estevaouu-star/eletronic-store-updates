@@ -30,11 +30,25 @@ jobs:
           python scripts/apply-v10.7.2.py
           python scripts/apply-v10.7.3.py
           python scripts/apply-v10.7.4.py
-      - name: Corrigir ícone 256px do aplicativo
+      - name: Garantir ícone 256px do aplicativo
         shell: pwsh
         run: |
-          $raw = (Get-Content "assets/eletromix-icon-256.b64" -Raw).Trim()
-          [IO.File]::WriteAllBytes("app/electron/assets/icon.png", [Convert]::FromBase64String($raw))
+          Add-Type -AssemblyName System.Drawing
+          $iconPath = (Resolve-Path "app/electron/assets/icon.png").Path
+          $tempPath = Join-Path (Split-Path $iconPath) "icon-256-temp.png"
+          $src = [System.Drawing.Image]::FromFile($iconPath)
+          $bmp = New-Object System.Drawing.Bitmap 256,256
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+          $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+          $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+          $g.DrawImage($src,0,0,256,256)
+          $g.Dispose()
+          $src.Dispose()
+          $bmp.Save($tempPath,[System.Drawing.Imaging.ImageFormat]::Png)
+          $bmp.Dispose()
+          Move-Item -Force $tempPath $iconPath
+          python -c "from PIL import Image" 2>$null; if ($LASTEXITCODE -eq 0) { python -c "from PIL import Image; im=Image.open(r'app/electron/assets/icon.png'); print('Icone final:', im.size)" } else { Write-Host 'Icone final preparado em 256x256.' }
           python -c "import json; p='app/package.json'; d=json.load(open(p,encoding='utf-8')); d['build']['win']['icon']='electron/assets/icon.png'; open(p,'w',encoding='utf-8').write(json.dumps(d,indent=2,ensure_ascii=False))"
       - name: Verificar JavaScript
         run: node --check app/public/app.js
