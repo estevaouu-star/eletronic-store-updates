@@ -1,1 +1,1 @@
-Publicar Eletromix 10.7.2: Produtos e Serviços lado a lado no Caixa e ajuste rápido de estoque para qualquer usuário quando o produto estiver zerado.
+Publicar Eletromix 10.7.3: corrigir de verdade Produtos e Serviços lado a lado e ajuste rápido de estoque no Caixa para qualquer usuário.
