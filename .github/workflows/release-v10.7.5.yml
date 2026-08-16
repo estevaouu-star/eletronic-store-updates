@@ -34,29 +34,14 @@ jobs:
       - name: Aplicar novo ícone Eletromix corretamente
         shell: pwsh
         run: |
-          python -c "import base64,re,pathlib; p=pathlib.Path('assets/eletromix-icon-256.b64'); raw=p.read_text(encoding='utf-8-sig'); clean=''.join(re.findall(r'[A-Za-z0-9+/=]',raw)); data=base64.b64decode(clean); pathlib.Path('app/electron/assets/icon-source.png').write_bytes(data)"
-          Add-Type -AssemblyName System.Drawing
-          $src=[System.Drawing.Image]::FromFile((Resolve-Path 'app/electron/assets/icon-source.png'))
-          $bmp=New-Object System.Drawing.Bitmap 256,256
-          $g=[System.Drawing.Graphics]::FromImage($bmp)
-          $g.Clear([System.Drawing.Color]::Black)
-          $g.InterpolationMode=[System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-          $g.SmoothingMode=[System.Drawing.Drawing2D.SmoothingMode]::HighQuality
-          $srcRect=New-Object System.Drawing.Rectangle 14,14,228,218
-          $dstRect=New-Object System.Drawing.Rectangle 0,6,256,244
-          $g.DrawImage($src,$dstRect,$srcRect,[System.Drawing.GraphicsUnit]::Pixel)
-          $src.Dispose();$g.Dispose()
-          $bmp.Save((Join-Path (Get-Location) 'app/electron/assets/icon.png'),[System.Drawing.Imaging.ImageFormat]::Png)
-          $bmp.Dispose()
-          Copy-Item 'app/electron/assets/icon.png' 'app/public/eletromix-app-icon.png' -Force
-          python -c "from PIL import Image; im=Image.open('app/electron/assets/icon.png'); print('Icone final:',im.size)" 2>$null || echo "Ícone gerado em 256x256"
+          python -c "import base64,pathlib,hashlib,struct; parts=[pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text(encoding='utf-8').strip() for i in range(1,7)]; data=base64.b64decode(''.join(parts),validate=True); assert hashlib.sha256(data).hexdigest()=='590c99ce1b57214450b83c375377f6bff1092d9615d5e224803b2a56da7d1617'; w,h=struct.unpack('>II',data[16:24]); assert (w,h)==(256,256); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data); print('Icone Eletromix valido:',w,'x',h,len(data),'bytes')"
       - name: Verificar estrutura e JavaScript
         shell: pwsh
         run: |
           node --check app/public/app.js
-          Select-String -Path app/public/app.js -Pattern '8\*1024\*1024' -Quiet
-          Select-String -Path app/src/server.ts -Pattern 'aparenciaPorLoja' -Quiet
-          Select-String -Path app/public/style.css -Pattern 'section>.title' -Quiet
+          if (-not (Select-String -Path app/public/app.js -Pattern '8\*1024\*1024' -Quiet)) { throw 'Limite novo de imagem não encontrado' }
+          if (-not (Select-String -Path app/src/server.ts -Pattern 'aparenciaPorLoja' -Quiet)) { throw 'Aparência por loja não encontrada' }
+          if (-not (Select-String -Path app/public/style.css -Pattern 'section>.title' -Quiet)) { throw 'Correção do título não encontrada' }
       - name: Instalar dependências
         working-directory: app
         run: npm install
