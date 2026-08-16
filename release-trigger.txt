@@ -1,1 +1,1 @@
-Publicar Eletromix 10.6.0 novamente após corrigir o localizador da navegação NFC-e no patch. Tentativa corrigida 2.
+Publicar Eletromix 10.6.1: corrigir a interface para que a NFC-e apareça somente na aba NFC-e e nunca nas outras páginas.
