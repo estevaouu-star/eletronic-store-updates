@@ -29,6 +29,8 @@ jobs:
         run: python scripts/apply-v10.4.py
       - name: Aplicar atualização 10.5.0
         run: python scripts/apply-v10.5.py
+      - name: Preparar correção 10.6.0
+        run: python scripts/fix-v10.6-patch.py
       - name: Aplicar atualização 10.6.0
         run: python scripts/apply-v10.6.py
       - name: Verificar JavaScript
