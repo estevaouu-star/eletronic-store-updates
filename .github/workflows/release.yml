@@ -21,6 +21,8 @@ jobs:
           Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
       - name: Aplicar atualização 10.2.0
         run: python scripts/apply-v10.2.py
+      - name: Corrigir tipos 10.2.0
+        run: python scripts/fix-v10.2-types.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
