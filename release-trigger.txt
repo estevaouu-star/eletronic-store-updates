@@ -1,1 +1,1 @@
-Publicar Eletromix 10.6.0: módulo NFC-e separado em homologação, com configuração fiscal e validação de prontidão, sem simular autorização SEFAZ.
+Publicar Eletromix 10.6.0 agora: módulo NFC-e separado em homologação, com configuração fiscal, validação de prontidão e preparação segura para integração real com a SEFAZ-SP.
