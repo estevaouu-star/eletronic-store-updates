@@ -1,0 +1,1 @@
+Publicar Eletromix 10.7.5: corrigir ícone e logos, aceitar imagens maiores, alinhar Personalização e salvar aparência realmente por loja.
