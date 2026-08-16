@@ -23,6 +23,8 @@ jobs:
         run: python scripts/apply-v10.2.py
       - name: Corrigir tipos 10.2.0
         run: python scripts/fix-v10.2-types.py
+      - name: Aplicar atualização 10.3.0
+        run: python scripts/apply-v10.3.py
       - name: Verificar JavaScript
         run: node --check app/public/app.js
       - name: Instalar dependências
@@ -36,12 +38,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.2.0
+      - name: Publicar Release 10.3.0
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.2.0" --yes 2>$null
-          git push origin --delete "v10.2.0" 2>$null
-          gh release create "v10.2.0" --target main --title "Eletromix 10.2.0 - Novo pagamento" --notes "Nova tela de pagamento em modal. Permite informar valores separados em PIX, Dinheiro, Débito e Crédito até completar exatamente a venda. Pagamentos não podem ficar faltando nem ultrapassar o total; dinheiro pode exceder o restante e o sistema calcula e exibe o troco."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.2.0" $_.FullName --clobber }
+          gh release delete "v10.3.0" --yes 2>$null
+          git push origin --delete "v10.3.0" 2>$null
+          gh release create "v10.3.0" --target main --title "Eletromix 10.3.0 - Pagamento e produtos incompletos" --notes "Corrige a perda de foco ao digitar valores na tela de pagamento. Adiciona em Produtos o filtro Faltando informação, com contador, indicação do que falta e remoção automática da lista após o cadastro ser corrigido."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.3.0" $_.FullName --clobber }
