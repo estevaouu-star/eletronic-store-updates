@@ -1,0 +1,79 @@
+name: Publicar Eletromix 10.7.5
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.7.5-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: |
+          if (Test-Path app) { Remove-Item app -Recurse -Force }
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar atualizações
+        shell: pwsh
+        run: |
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+      - name: Aplicar novo ícone Eletromix corretamente
+        shell: pwsh
+        run: |
+          python -c "import base64,re,pathlib; p=pathlib.Path('assets/eletromix-icon-256.b64'); raw=p.read_text(encoding='utf-8-sig'); clean=''.join(re.findall(r'[A-Za-z0-9+/=]',raw)); data=base64.b64decode(clean); pathlib.Path('app/electron/assets/icon-source.png').write_bytes(data)"
+          Add-Type -AssemblyName System.Drawing
+          $src=[System.Drawing.Image]::FromFile((Resolve-Path 'app/electron/assets/icon-source.png'))
+          $bmp=New-Object System.Drawing.Bitmap 256,256
+          $g=[System.Drawing.Graphics]::FromImage($bmp)
+          $g.Clear([System.Drawing.Color]::Black)
+          $g.InterpolationMode=[System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+          $g.SmoothingMode=[System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+          $srcRect=New-Object System.Drawing.Rectangle 14,14,228,218
+          $dstRect=New-Object System.Drawing.Rectangle 0,6,256,244
+          $g.DrawImage($src,$dstRect,$srcRect,[System.Drawing.GraphicsUnit]::Pixel)
+          $src.Dispose();$g.Dispose()
+          $bmp.Save((Join-Path (Get-Location) 'app/electron/assets/icon.png'),[System.Drawing.Imaging.ImageFormat]::Png)
+          $bmp.Dispose()
+          Copy-Item 'app/electron/assets/icon.png' 'app/public/eletromix-app-icon.png' -Force
+          python -c "from PIL import Image; im=Image.open('app/electron/assets/icon.png'); print('Icone final:',im.size)" 2>$null || echo "Ícone gerado em 256x256"
+      - name: Verificar estrutura e JavaScript
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          Select-String -Path app/public/app.js -Pattern '8\*1024\*1024' -Quiet
+          Select-String -Path app/src/server.ts -Pattern 'aparenciaPorLoja' -Quiet
+          Select-String -Path app/public/style.css -Pattern 'section>.title' -Quiet
+      - name: Instalar dependências
+        working-directory: app
+        run: npm install
+      - name: Compilar backend
+        working-directory: app
+        run: npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar Release 10.7.5
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "v10.7.5" --yes 2>$null
+          git push origin --delete "v10.7.5" 2>$null
+          gh release create "v10.7.5" --target main --title "Eletromix 10.7.5 - Correções de personalização" --notes "Corrige os problemas mostrados na tela de Personalização: título alinhado corretamente, logos maiores e sem corte, upload de imagens de até 8 MB com otimização automática, novo ícone Eletromix aplicado também no executável/atalho e no topo do sistema. A personalização agora fica realmente salva separadamente por loja."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.5" $_.FullName --clobber }
