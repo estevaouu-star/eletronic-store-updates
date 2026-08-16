@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - 'Eletromix-v10.1.0-source-for-release.zip'
+      - 'release-trigger.txt'
   workflow_dispatch:
 permissions:
   contents: write
@@ -19,6 +19,10 @@ jobs:
         run: |
           if (Test-Path app) { Remove-Item app -Recurse -Force }
           Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar atualização 10.2.0
+        run: python scripts/apply-v10.2.py
+      - name: Verificar JavaScript
+        run: node --check app/public/app.js
       - name: Instalar dependências
         working-directory: app
         run: npm install
@@ -30,12 +34,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win nsis --publish never
-      - name: Publicar Release 10.1.0
+      - name: Publicar Release 10.2.0
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "v10.1.0" --yes 2>$null
-          git push origin --delete "v10.1.0" 2>$null
-          gh release create "v10.1.0" --target main --title "Eletromix 10.1.0 - Pagamento misto" --notes "Adiciona pagamento dividido entre PIX, Dinheiro, Débito e Crédito. É possível usar de 2 a 4 formas na mesma venda."
-          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.1.0" $_.FullName --clobber }
+          gh release delete "v10.2.0" --yes 2>$null
+          git push origin --delete "v10.2.0" 2>$null
+          gh release create "v10.2.0" --target main --title "Eletromix 10.2.0 - Novo pagamento" --notes "Nova tela de pagamento em modal. Permite informar valores separados em PIX, Dinheiro, Débito e Crédito até completar exatamente a venda. Pagamentos não podem ficar faltando nem ultrapassar o total; dinheiro pode exceder o restante e o sistema calcula e exibe o troco."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.2.0" $_.FullName --clobber }
