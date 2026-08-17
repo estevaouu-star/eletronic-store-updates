@@ -1,0 +1,97 @@
+name: Publicar Eletromix 10.8.2
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.8.2-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: |
+          if (Test-Path app) { Remove-Item app -Recurse -Force }
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar atualizações
+        shell: pwsh
+        run: |
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+          python scripts/apply-v10.8.0.py
+          python scripts/apply-v10.8.1.py
+          python scripts/apply-v10.8.2.py
+      - name: Aplicar ícone Eletromix validado
+        shell: pwsh
+        run: |
+          python -c "import base64,pathlib,hashlib,struct; parts=[pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text(encoding='utf-8').strip() for i in range(1,7)]; data=base64.b64decode(''.join(parts),validate=True); assert hashlib.sha256(data).hexdigest()=='590c99ce1b57214450b83c375377f6bff1092d9615d5e224803b2a56da7d1617'; w,h=struct.unpack('>II',data[16:24]); assert (w,h)==(256,256); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Validar login e impressão única
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/main.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/preload.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path app/electron/main.cjs -SimpleMatch 'slice("__ELETROMIX__".length)' -Quiet)) { throw 'ACK do spooler ainda está incorreto' }
+          if (-not (Select-String -Path app/electron/main.cjs -SimpleMatch 'thermalPrintBusy' -Quiet)) { throw 'Trava de impressão concorrente ausente' }
+          if (-not (Select-String -Path app/public/app.js -SimpleMatch 'receiptPrintInFlight' -Quiet)) { throw 'Trava de impressão da interface ausente' }
+          if (-not (Select-String -Path app/public/index.html -SimpleMatch 'id="loginScreen"' -Quiet)) { throw 'Tela de login ausente' }
+          if (-not (Select-String -Path app/src/server.ts -SimpleMatch 'Faça login para continuar.' -Quiet)) { throw 'Autenticação real do backend ausente' }
+      - name: Instalar dependências
+        working-directory: app
+        run: npm install
+      - name: Compilar backend
+        working-directory: app
+        run: npm run build
+      - name: Testar autenticação do backend
+        shell: pwsh
+        run: |
+          $env:ELECTRON_STORE_PORT='32145'
+          $proc=Start-Process -FilePath node -ArgumentList 'dist/server.js' -WorkingDirectory 'app' -PassThru -WindowStyle Hidden
+          try {
+            Start-Sleep -Seconds 2
+            $semLogin = curl.exe -s -o NUL -w "%{http_code}" http://127.0.0.1:32145/api/me
+            if ($semLogin -ne '401') { throw "API sem login deveria retornar 401, retornou $semLogin" }
+            $loginJson = curl.exe -s -X POST http://127.0.0.1:32145/api/login -H "Content-Type: application/json" -d '{"login":"admin","senha":"admin123"}'
+            $login = $loginJson | ConvertFrom-Json
+            if (-not $login.token) { throw 'Login padrão não retornou token' }
+            $meJson = curl.exe -s http://127.0.0.1:32145/api/me -H "Authorization: Bearer $($login.token)"
+            $me = $meJson | ConvertFrom-Json
+            if ($me.login -ne 'admin') { throw 'Sessão autenticada não foi reconhecida' }
+            Write-Host 'Login validado: sem token=401 e com token=OK.'
+          } finally {
+            if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          }
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar Release 10.8.2
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "v10.8.2" --yes 2>$null
+          git push origin --delete "v10.8.2" 2>$null
+          gh release create "v10.8.2" --target main --title "Eletromix 10.8.2 - Login e impressão única" --notes "Corrige a repetição de comprovantes no modo térmico direto: o retorno do spooler RAW agora é interpretado corretamente e há travas na interface e no processo principal para impedir impressões simultâneas. Ativa o login real do Eletromix, com sessão por usuário, logout e gestão de usuários dentro de Configurações. O ajuste rápido de estoque no Caixa continua disponível para qualquer usuário autenticado."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.8.2" $_.FullName --clobber }
