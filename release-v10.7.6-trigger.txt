@@ -1,0 +1,1 @@
+Publicar Eletromix 10.7.6: corrigir impressão térmica de comprovantes no Windows, restaurar ponte desktopPrinter e reforçar suporte a bobinas 58/80 mm.
