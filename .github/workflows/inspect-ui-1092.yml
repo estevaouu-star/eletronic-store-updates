@@ -15,9 +15,11 @@ jobs:
         shell: bash
         run: |
           unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
-          echo '=== HTML nav/sidebar ==='
-          grep -nEi 'sidebar|nav|menu|produtos' app/public/index.html | head -120 || true
-          echo '=== JS produtos ==='
-          grep -nEi 'renderProdutos|loadProdutos|produtos.*innerHTML|product-list|produto-list|produtosGrid|produtosList|#produtos' app/public/app.js | head -180 || true
+          echo '=== HTML Caixa ==='
+          sed -n '45,90p' app/public/index.html
+          echo '=== HTML Produtos ==='
+          sed -n '100,112p' app/public/index.html
+          echo '=== JS renderCaixa/produtos ==='
+          grep -nEi 'renderBuscaProdutos|renderCart|listaProdutos|listaServicos|renderProdutos' app/public/app.js | head -180 || true
           echo '=== CSS layout ==='
-          grep -nEi 'sidebar|nav|\.layout|\.main|\.content|aside' app/public/style.css | head -180 || true
+          grep -nEi 'sidebar|nav|\.layout|main\{|aside\{' app/public/style.css | head -180 || true
