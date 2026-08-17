@@ -1,0 +1,66 @@
+name: Publicar Eletromix 10.7.9
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.7.9-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: |
+          if (Test-Path app) { Remove-Item app -Recurse -Force }
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar atualizações
+        shell: pwsh
+        run: |
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+      - name: Aplicar ícone Eletromix validado
+        shell: pwsh
+        run: |
+          python -c "import base64,pathlib,hashlib,struct; parts=[pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text(encoding='utf-8').strip() for i in range(1,7)]; data=base64.b64decode(''.join(parts),validate=True); assert hashlib.sha256(data).hexdigest()=='590c99ce1b57214450b83c375377f6bff1092d9615d5e224803b2a56da7d1617'; w,h=struct.unpack('>II',data[16:24]); assert (w,h)==(256,256); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Verificar JavaScript
+        run: |
+          node --check app/public/app.js
+          node --check app/electron/main.cjs
+          node --check app/electron/preload.cjs
+      - name: Instalar dependências
+        working-directory: app
+        run: npm install
+      - name: Compilar backend
+        working-directory: app
+        run: npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar Release 10.7.9
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "v10.7.9" --yes 2>$null
+          git push origin --delete "v10.7.9" 2>$null
+          gh release create "v10.7.9" --target main --title "Eletromix 10.7.9 - Correção definitiva do avanço de papel" --notes "Altera o motor de impressão térmica para não depender do comprimento de página definido pelo driver do Windows. O comprovante é preparado somente com o conteúdo necessário e o avanço final é mínimo. O método anterior fica disponível como compatibilidade."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.7.9" $_.FullName --clobber }
