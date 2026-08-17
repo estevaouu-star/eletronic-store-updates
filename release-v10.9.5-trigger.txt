@@ -1,1 +1,1 @@
-Publicar Eletromix 10.9.5 corrigida sem depender da toolbar HTML. Cobrança flutuante, vendedor obrigatório e filtro Faltando informação restaurado. Tentativa 3.
+Publicar Eletromix 10.9.5 corrigida. Tentativa 4: validação agora confere a UI injetada pelo JavaScript em vez de procurar elementos estáticos no HTML.
