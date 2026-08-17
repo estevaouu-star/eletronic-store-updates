@@ -1,1 +1,1 @@
-Publicar Eletromix 10.8.5 com a lista de usuários do ADM corrigida e botão Editar meu acesso.
+Reprocessar Eletromix 10.8.5. Compilação e testes já passaram; repetir publicação após erro temporário 503 da API de Releases.
