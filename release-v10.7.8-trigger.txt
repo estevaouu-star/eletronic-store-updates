@@ -1,0 +1,1 @@
+Publicar Eletromix 10.7.8: corrigir avanço em branco antes do comprovante e ancorar impressão no topo da bobina.
