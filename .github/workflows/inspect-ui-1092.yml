@@ -1,4 +1,4 @@
-name: Inspecionar UI 10.9.2
+name: Inspecionar UI 10.9.4
 on:
   workflow_dispatch:
   push:
@@ -11,12 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extrair e localizar estruturas
+      - name: Inspecionar Caixa e fluxo de caixa
         shell: bash
         run: |
           unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
-          echo '=== JS renderBuscaProdutos ==='
-          sed -n '258,305p' app/public/app.js
-          echo '=== JS renderProdutos/listeners ==='
-          sed -n '395,405p' app/public/app.js
-          sed -n '995,1007p' app/public/app.js
+          echo '=== HTML CAIXA COMPLETO ==='
+          sed -n '38,104p' app/public/index.html
+          echo '=== FUNCOES CAIXA ==='
+          grep -nEi 'loadCaixa|abrirCaixa|fecharCaixa|caixaAtual|/api/caixa|caixaGestao' app/public/app.js | head -120 || true
+          echo '=== BACKEND CAIXA ==='
+          grep -nEi '/api/caixa|caixa.*aberto|abrir.*caixa|fechar.*caixa' app/src/server.ts | head -160 || true
