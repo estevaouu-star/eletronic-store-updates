@@ -1,0 +1,51 @@
+name: Inspecionar usuários e lojas
+on:
+  push:
+    paths: ['inspect-user-stores-trigger.txt']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar versão atual
+        shell: bash
+        run: |
+          rm -rf app
+          unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+          python scripts/apply-v10.8.0.py
+          python scripts/apply-v10.8.1.py
+          python scripts/apply-v10.8.2.py
+          python scripts/apply-v10.8.3.py
+      - name: Mostrar trechos relevantes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          for f, needles in {
+            'app/src/server.ts':['type Usuario','app.get("/api/usuarios"','app.post("/api/usuarios"','app.put("/api/usuarios','app.get("/api/lojas"','function lojaIdReq','function auth'],
+            'app/public/app.js':['let lojaId','async function loadLojas','storeSelect','async function loadUsuarios','function newUsuario','async function editUsuario','async function boot'],
+            'app/public/index.html':['id="storeSelect"','id="config"']
+          }.items():
+            s=Path(f).read_text(encoding='utf-8')
+            print('\n===== FILE',f,'=====')
+            for n in needles:
+              i=s.find(n)
+              if i>=0:
+                print('\n---',n,'---\n',s[max(0,i-900):i+4200])
+          PY
