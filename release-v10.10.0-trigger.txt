@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.0: remover Venda Rápida, deixar F1 no vendedor, F2 no cliente, F10 no cobrar e eliminar scroll global do Caixa.
