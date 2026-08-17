@@ -1,0 +1,103 @@
+name: Publicar Eletromix 10.8.5
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.8.5-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: |
+          if (Test-Path app) { Remove-Item app -Recurse -Force }
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar atualizações
+        shell: pwsh
+        run: |
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+          python scripts/apply-v10.8.0.py
+          python scripts/apply-v10.8.1.py
+          python scripts/apply-v10.8.2.py
+          python scripts/apply-v10.8.3.py
+          python scripts/apply-v10.8.4.py
+          python scripts/fix-v10.8.4-types.py
+          python scripts/apply-v10.8.5.py
+      - name: Aplicar ícone Eletromix validado
+        shell: pwsh
+        run: |
+          python -c "import base64,pathlib,hashlib,struct; parts=[pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text(encoding='utf-8').strip() for i in range(1,7)]; data=base64.b64decode(''.join(parts),validate=True); assert hashlib.sha256(data).hexdigest()=='590c99ce1b57214450b83c375377f6bff1092d9615d5e224803b2a56da7d1617'; w,h=struct.unpack('>II',data[16:24]); assert (w,h)==(256,256); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Validar JavaScript e gestão ADM
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/main.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/preload.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path app/public/app.js -SimpleMatch 'if(me?.cargo==="admin")await loadUsuarios();renderCart()' -Quiet)) { throw 'Lista de usuários não entra no boot' }
+          if (-not (Select-String -Path app/public/app.js -SimpleMatch 'if(nav.dataset.s==="config"){await loadConfigForm();if(me?.cargo==="admin")await loadUsuarios();}' -Quiet)) { throw 'Configurações não recarrega usuários' }
+          if (-not (Select-String -Path app/public/index.html -SimpleMatch 'id="editarMeuAcessoBtn"' -Quiet)) { throw 'Botão Editar meu acesso ausente' }
+          if (-not (Select-String -Path app/public/app.js -SimpleMatch 'function editMeuAcesso()' -Quiet)) { throw 'Função de edição do ADM ausente' }
+      - name: Instalar dependências
+        working-directory: app
+        run: npm install
+      - name: Compilar backend
+        working-directory: app
+        run: npm run build
+      - name: Testar login e usuário ADM
+        shell: pwsh
+        run: |
+          $env:ELECTRON_STORE_PORT='32149'
+          $env:ELECTRON_STORE_DATA_DIR="$env:RUNNER_TEMP\eletromix-users-1085"
+          if (Test-Path $env:ELECTRON_STORE_DATA_DIR) { Remove-Item $env:ELECTRON_STORE_DATA_DIR -Recurse -Force }
+          $proc=Start-Process -FilePath node -ArgumentList 'dist/server.js' -WorkingDirectory 'app' -PassThru -WindowStyle Hidden
+          try {
+            Start-Sleep -Seconds 2
+            $base='http://127.0.0.1:32149'
+            $loginJson=curl.exe -s -X POST "$base/api/login" -H "Content-Type: application/json" -d '{"login":"admin","senha":"admin123"}'
+            $login=$loginJson | ConvertFrom-Json
+            if (-not $login.token) { throw 'ADM não conseguiu entrar' }
+            $token=$login.token
+            $usersJson=curl.exe -s "$base/api/usuarios" -H "Authorization: Bearer $token"
+            $users=@($usersJson | ConvertFrom-Json)
+            if ($users.Count -lt 1) { throw 'API de usuários não retornou o ADM' }
+            if ($users[0].cargo -ne 'admin') { throw 'Primeiro usuário não é ADM' }
+            Write-Host 'ADM aparece na lista de usuários e pode ser editado.'
+          } finally {
+            if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          }
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar Release 10.8.5
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "v10.8.5" --yes 2>$null
+          git push origin --delete "v10.8.5" 2>$null
+          gh release create "v10.8.5" --target main --title "Eletromix 10.8.5 - Gestão de acessos corrigida" --notes "Corrige a lista vazia de Usuários e login nas Configurações. O ADM agora aparece automaticamente na tabela, a lista é recarregada ao abrir Configurações e há um botão Editar meu acesso para alterar o próprio nome, login ou senha sem depender da linha da tabela. Mantém o controle de uma ou várias lojas por usuário da 10.8.4."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.8.5" $_.FullName --clobber }
