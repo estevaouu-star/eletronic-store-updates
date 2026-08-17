@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.5: corrigir abas, atualizar, restaurar filtro correto de Produtos e manter login até mudança de versão.
