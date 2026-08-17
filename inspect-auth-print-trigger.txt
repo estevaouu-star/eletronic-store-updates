@@ -1,0 +1,1 @@
+inspecionar estrutura atual de autenticação, usuários e fluxo de impressão
