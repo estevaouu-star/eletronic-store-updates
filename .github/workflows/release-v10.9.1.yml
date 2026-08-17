@@ -1,0 +1,78 @@
+name: Publicar Eletromix 10.9.1
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.9.1-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: |
+          if (Test-Path app) { Remove-Item app -Recurse -Force }
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar atualizações
+        shell: pwsh
+        run: |
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+          python scripts/apply-v10.8.0.py
+          python scripts/apply-v10.8.1.py
+          python scripts/apply-v10.8.2.py
+          python scripts/apply-v10.8.3.py
+          python scripts/apply-v10.8.4.py
+          python scripts/fix-v10.8.4-types.py
+          python scripts/apply-v10.8.5.py
+          python scripts/apply-v10.9.0.py
+          python scripts/apply-v10.9.1.py
+      - name: Aplicar ícone
+        shell: pwsh
+        run: |
+          python -c "import base64,pathlib,hashlib; parts=[pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7)]; data=base64.b64decode(''.join(parts)); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Validar 10.9.1
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/main.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path app/public/app.js -SimpleMatch "const size=3" -Quiet)) { throw 'Paginação de 3 produtos ausente' }
+          if (-not (Select-String -Path app/public/app.js -SimpleMatch "★ Favoritos" -Quiet)) { throw 'Favoritos do novo Caixa ausentes' }
+          if (-not (Select-String -Path app/public/app.js -SimpleMatch "Mais vendidos" -Quiet)) { throw 'Mais vendidos ausente' }
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "v10.9.1" --yes 2>$null
+          git push origin --delete "v10.9.1" 2>$null
+          gh release create "v10.9.1" --target main --title "Eletromix 10.9.1 - Caixa PDV e Produtos leves" --notes "Novo Caixa com categorias, favoritos, mais vendidos e pesquisa. Aba Produtos paginada de 3 em 3 para reduzir travamentos em PCs de loja."
+          Get-ChildItem app/release -File | Where-Object { $_.Name -match '\.(exe|yml|blockmap)$' } | ForEach-Object { gh release upload "v10.9.1" $_.FullName --clobber }
