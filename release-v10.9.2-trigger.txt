@@ -1,1 +1,1 @@
-Publicar 10.9.2 corrigida: PDV, Produtos 3 por página, login persistente e Ver/Ocultar senha. Reexecução 17-08-2026.
+Publicar 10.9.2 corrigida. Tentativa 4 após corrigir validações do workflow.
