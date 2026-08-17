@@ -55,10 +55,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check app/electron/main.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Select-String -Path 'app/public/index.html' -Pattern 'openCheckout' -SimpleMatch -Quiet)) { throw 'Botao COBRAR abaixo do total ausente' }
-          if (-not (Select-String -Path 'app/public/index.html' -Pattern 'checkoutFloat' -SimpleMatch -Quiet)) { throw 'Menu flutuante de pagamento ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'abrirCheckoutFlutuante' -SimpleMatch -Quiet)) { throw 'Fluxo COBRAR ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'checkoutFloat' -SimpleMatch -Quiet)) { throw 'Menu flutuante de pagamento ausente' }
           if (-not (Select-String -Path 'app/public/app.js' -Pattern 'Selecione o vendedor antes de iniciar a venda.' -SimpleMatch -Quiet)) { throw 'Bloqueio por vendedor ausente' }
-          if (-not (Select-String -Path 'app/public/index.html' -Pattern 'filtroInfoProdutoBtn' -SimpleMatch -Quiet)) { throw 'Botao Faltando informacao ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'filtroInfoProdutoBtn' -SimpleMatch -Quiet)) { throw 'Botao Faltando informacao ausente' }
           if (-not (Select-String -Path 'app/public/app.js' -Pattern 'produtoTemInformacaoFaltando' -SimpleMatch -Quiet)) { throw 'Filtro Faltando informacao nao funcional' }
           if (-not (Select-String -Path 'app/public/app.js' -Pattern 'const produtosPorPagina=25' -SimpleMatch -Quiet)) { throw 'Produtos nao estao em 25 por pagina' }
       - name: Instalar e compilar
