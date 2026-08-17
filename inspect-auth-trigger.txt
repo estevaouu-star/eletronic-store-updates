@@ -1,0 +1,1 @@
+Inspecionar autenticação existente antes de publicar 10.8.2.
