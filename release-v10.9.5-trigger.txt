@@ -1,1 +1,1 @@
-Publicar Eletromix 10.9.5: cobrança flutuante, vendedor obrigatório e correção do filtro Faltando informação.
+Publicar Eletromix 10.9.5 corrigida: cobrança flutuante, vendedor obrigatório e filtro Faltando informação restaurado. Reexecução após corrigir aplicação da toolbar.
