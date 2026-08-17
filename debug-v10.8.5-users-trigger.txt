@@ -1,0 +1,1 @@
+Diagnosticar por que a lista de usuários não aparece na 10.8.4.
