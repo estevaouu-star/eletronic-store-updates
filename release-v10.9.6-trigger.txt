@@ -1,0 +1,1 @@
+Publicar Eletromix 10.9.6: novo pagamento estilo PDV, sem data retroativa, lista do que já foi pago, botão Faltando informação removido e Venda Rápida com vendedor obrigatório.
