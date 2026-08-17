@@ -1,1 +1,1 @@
-Reprocessar Eletromix 10.8.4 após corrigir a tipagem das permissões de lojas. Validar ADM, login de uma loja e login de múltiplas lojas.
+Publicar Eletromix 10.8.4 após validar em teste real: ADM-only, usuário de uma loja, usuário de múltiplas lojas e edição do próprio login ADM.
