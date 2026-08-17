@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.2: remover bloqueio residual da antiga Venda Rápida e corrigir F1 vendedor, F2 cliente e F10 cobrar.
