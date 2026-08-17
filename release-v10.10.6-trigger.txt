@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.6: corrigir permissões do vendedor por loja, login persistente, filtro Faltando informações e reforçar atualizador.
