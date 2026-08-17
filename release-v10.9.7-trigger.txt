@@ -1,0 +1,1 @@
+Publicar Eletromix 10.9.7: Venda Rápida refeita do zero, compacta em tela única, F1 vendedor, F2 cliente, F10 cobrar e scroll somente na lista de produtos.
