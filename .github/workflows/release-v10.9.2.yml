@@ -52,10 +52,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check app/electron/main.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Select-String app/public/app.js -SimpleMatch "restoreEletromixSession" -Quiet)) { throw 'Sessao persistente ausente' }
-          if (-not (Select-String app/public/app.js -SimpleMatch "size=3" -Quiet)) { throw 'Produtos 3 por pagina ausente' }
-          if (-not (Select-String app/public/app.js -SimpleMatch "pdv1092-layout" -Quiet)) { throw 'Novo layout PDV ausente' }
-          if (-not (Select-String app/public/index.html -SimpleMatch "toggleLoginPassword" -Quiet)) { throw 'Botao mostrar senha ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'restoreEletromixSession' -SimpleMatch -Quiet)) { throw 'Sessao persistente ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'size=3' -SimpleMatch -Quiet)) { throw 'Produtos 3 por pagina ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'pdv1092-layout' -SimpleMatch -Quiet)) { throw 'Novo layout PDV ausente' }
+          if (-not (Select-String -Path 'app/public/index.html' -Pattern 'toggleLoginPassword' -SimpleMatch -Quiet)) { throw 'Botao mostrar senha ausente' }
       - name: Instalar e compilar
         working-directory: app
         run: |
