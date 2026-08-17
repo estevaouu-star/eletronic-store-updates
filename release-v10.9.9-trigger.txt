@@ -1,0 +1,1 @@
+Publicar Eletromix 10.9.9: corrigir crash pós-login e adicionar botão Atualizar diretamente na tela de login.
