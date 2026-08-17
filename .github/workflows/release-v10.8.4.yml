@@ -40,6 +40,7 @@ jobs:
           python scripts/apply-v10.8.2.py
           python scripts/apply-v10.8.3.py
           python scripts/apply-v10.8.4.py
+          python scripts/fix-v10.8.4-types.py
       - name: Aplicar ícone Eletromix validado
         shell: pwsh
         run: |
@@ -108,6 +109,7 @@ jobs:
             if ($novoMulti.lojaIds.Count -ne 2) { throw 'Permissão de múltiplas lojas não foi salva' }
             $loginMultiJson = curl.exe -s -X POST "$base/api/login" -H "Content-Type: application/json" -d '{"login":"multi","senha":"teste123"}'
             $loginMulti=$loginMultiJson | ConvertFrom-Json
+            if (-not $loginMulti.token) { throw 'Usuário multi não conseguiu entrar' }
             $lojasMultiJson = curl.exe -s "$base/api/lojas" -H "Authorization: Bearer $($loginMulti.token)"
             $lojasMulti=@($lojasMultiJson | ConvertFrom-Json)
             if ($lojasMulti.Count -ne 2) { throw 'Usuário multi não recebeu exatamente duas lojas' }
