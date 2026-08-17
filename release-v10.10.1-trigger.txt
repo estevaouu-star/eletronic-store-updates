@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.1: remover definitivamente a barra antiga Venda Rápida do topo do Caixa, mantendo somente F1 vendedor, F2 cliente e F10 cobrar.
