@@ -1,0 +1,1 @@
+Publicar Eletromix 10.8.1: corrigir SyntaxError da 10.8.0 mantendo corte automático, logo térmica mais clara e impressão otimizada.
