@@ -1,0 +1,1 @@
+Publicar 10.9.4: Caixa completamente reconstruído, 25 produtos por página e caixa automático sem opção manual de abrir/fechar.
