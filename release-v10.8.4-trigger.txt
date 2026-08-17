@@ -1,1 +1,1 @@
-Publicar Eletromix 10.8.4 com gestão de logins exclusiva do ADM e permissões de uma ou várias lojas por usuário.
+Reprocessar Eletromix 10.8.4 após corrigir a tipagem das permissões de lojas. Validar ADM, login de uma loja e login de múltiplas lojas.
