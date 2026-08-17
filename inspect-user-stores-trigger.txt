@@ -1,0 +1,1 @@
+Inspecionar estrutura de usuários, permissões por loja e seletor de loja antes da 10.8.4.
