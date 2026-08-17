@@ -1,1 +1,1 @@
-Inspecionar funções exatas de renderização do PDV e Produtos para hotfix 10.9.3.
+Inspecionar Caixa completo, abertura/fechamento e fluxo de venda para 10.9.4.
