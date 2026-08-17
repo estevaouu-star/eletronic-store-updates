@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.7: scroll interno nas categorias, remover apenas Faltando informação (N) quebrado preservando filtro funcional, e persistir sessão por token até atualização ou logout.
