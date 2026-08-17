@@ -1,0 +1,71 @@
+name: Diagnosticar acesso por loja 10.8.4
+on:
+  push:
+    paths: ['debug-v10.8.4-trigger.txt']
+  workflow_dispatch:
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar e compilar
+        shell: bash
+        run: |
+          rm -rf app
+          unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+          python scripts/apply-v10.8.0.py
+          python scripts/apply-v10.8.1.py
+          python scripts/apply-v10.8.2.py
+          python scripts/apply-v10.8.3.py
+          python scripts/apply-v10.8.4.py
+          python scripts/fix-v10.8.4-types.py
+          cd app
+          npm install --silent
+          npm run build
+      - name: Testar respostas reais
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ELECTRON_STORE_PORT=32148
+          export ELECTRON_STORE_DATA_DIR="$RUNNER_TEMP/eletromix-access-debug"
+          rm -rf "$ELECTRON_STORE_DATA_DIR"
+          (cd app && node dist/server.js > "$RUNNER_TEMP/server.log" 2>&1) &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          sleep 2
+          BASE=http://127.0.0.1:32148
+          ADMIN=$(curl -s -X POST "$BASE/api/login" -H 'Content-Type: application/json' --data '{"login":"admin","senha":"admin123"}')
+          echo "ADMIN=$ADMIN"
+          TOKEN=$(node -e "const d=JSON.parse(process.argv[1]); console.log(d.token||'')" "$ADMIN")
+          DUTRA=$(curl -s -X POST "$BASE/api/lojas" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' --data '{"nome":"Loja Dutra"}')
+          CENTRO=$(curl -s -X POST "$BASE/api/lojas" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' --data '{"nome":"Loja Centro"}')
+          echo "DUTRA=$DUTRA"
+          echo "CENTRO=$CENTRO"
+          DID=$(node -e "console.log(JSON.parse(process.argv[1]).id)" "$DUTRA")
+          CID=$(node -e "console.log(JSON.parse(process.argv[1]).id)" "$CENTRO")
+          USER=$(curl -s -X POST "$BASE/api/usuarios" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' --data "{\"nome\":\"Usuário Dutra\",\"login\":\"dutra\",\"senha\":\"teste123\",\"cargo\":\"vendedor\",\"lojaIds\":[$DID]}")
+          echo "USER=$USER"
+          LOGIN=$(curl -s -X POST "$BASE/api/login" -H 'Content-Type: application/json' --data '{"login":"dutra","senha":"teste123"}')
+          echo "LOGIN_DUTRA=$LOGIN"
+          UTOKEN=$(node -e "console.log(JSON.parse(process.argv[1]).token||'')" "$LOGIN")
+          LOJAS=$(curl -s "$BASE/api/lojas" -H "Authorization: Bearer $UTOKEN")
+          echo "LOJAS_DUTRA=$LOJAS"
+          ME=$(curl -s "$BASE/api/me" -H "Authorization: Bearer $UTOKEN" -H "X-Store-Id: $CID")
+          echo "ME_PEDINDO_CENTRO=$ME"
+          echo '--- server log ---'
+          cat "$RUNNER_TEMP/server.log"
