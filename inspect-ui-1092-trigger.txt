@@ -1,1 +1,1 @@
-Inspecionar sidebar e renderização de Produtos para corrigir 10.9.2.
+Inspecionar HTML completo do Caixa e Produtos para hotfix 10.9.3.
