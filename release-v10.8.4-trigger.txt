@@ -1,0 +1,1 @@
+Publicar Eletromix 10.8.4 com gestão de logins exclusiva do ADM e permissões de uma ou várias lojas por usuário.
