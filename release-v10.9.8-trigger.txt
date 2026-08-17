@@ -1,0 +1,1 @@
+Publicar Eletromix 10.9.8: corrigir erro Cannot set properties of null após login causado pela reconstrução da Venda Rápida durante o boot.
