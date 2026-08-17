@@ -1,1 +1,2 @@
 Publicar Eletromix 10.9.0 com novo Caixa/PDV inspirado na referência Smart POS enviada pelo usuário.
+Reexecução após corrigir o teste de login ADM em 17/08/2026.
