@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.8: reconstruir o botão Atualizar com bridge IPC dedicado e electron-updater, baixar atualização dentro do app e instalar/reiniciar pelo próprio Eletromix.
