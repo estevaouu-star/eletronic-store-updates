@@ -74,9 +74,14 @@ jobs:
           $proc=Start-Process -FilePath node -ArgumentList 'dist/server.js' -WorkingDirectory 'app' -PassThru -WindowStyle Hidden
           try {
             Start-Sleep -Seconds 2
-            $loginJson=curl.exe -s -X POST "http://127.0.0.1:32150/api/login" -H "Content-Type: application/json" -d '{"login":"admin","senha":"admin123"}'
-            $login=$loginJson | ConvertFrom-Json
+            $base='http://127.0.0.1:32150'
+            $body=@{ login='admin'; senha='admin123' } | ConvertTo-Json -Compress
+            $login=Invoke-RestMethod -Method Post -Uri "$base/api/login" -ContentType 'application/json' -Body $body
             if (-not $login.token) { throw 'ADM não conseguiu entrar' }
+            $headers=@{ Authorization="Bearer $($login.token)" }
+            $me=Invoke-RestMethod -Method Get -Uri "$base/api/me" -Headers $headers
+            if ($me.cargo -ne 'admin') { throw 'Sessão criada não pertence ao ADM' }
+            Write-Host 'Login ADM validado com sucesso.'
           } finally { if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force } }
       - name: Gerar instalador
         working-directory: app
