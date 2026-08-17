@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extrair base e aplicar ate 10.7.4
+      - name: Extrair base e aplicar ate 10.7.5
         run: |
           unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
           python scripts/apply-v10.2.py
@@ -23,13 +23,17 @@ jobs:
           python scripts/apply-v10.7.2.py
           python scripts/apply-v10.7.3.py
           python scripts/apply-v10.7.4.py
-      - name: Mostrar personalização completa
+          python scripts/apply-v10.7.5.py
+      - name: Mostrar fluxo completo de impressão
         run: |
-          echo '=== HTML PERSONALIZACAO ==='
-          sed -n '195,270p' app/public/index.html || true
-          echo '=== JS APARENCIA / LOGOS / UPLOAD ==='
-          grep -niE -A35 -B15 'loadAparencia|loadAppearanceForm|saveAparencia|logoDataUrl|logoComprovante|650|FileReader|appearanceForm|aparenciaForm|preset' app/public/app.js | head -n 900 || true
-          echo '=== SERVER APARENCIA ==='
-          grep -niE -A45 -B20 '/api/aparencia|type Aparencia|aparenciaPorLoja|aparencia' app/src/server.ts | head -n 700 || true
-          echo '=== CSS LOGOS ==='
-          grep -niE -A25 -B10 'brand-logo|logo-upload|logo-preview|appearance|preset|system-icon' app/public/style.css | head -n 600 || true
+          echo '=== FRONTEND IMPRESSAO ==='
+          grep -niE -A45 -B25 'directPrintReceipt|printReceipt|printerSelect|printerWidth|printerAuto|refreshPrinters|testPrinter|window\.electron|ipc|print' app/public/app.js | head -n 1400 || true
+          echo '=== HTML CONFIG IMPRESSORA ==='
+          grep -niE -A50 -B20 'printer|impress|bobina|58|80' app/public/index.html | head -n 700 || true
+          echo '=== ELECTRON MAIN/PRELOAD ==='
+          find app/electron -maxdepth 3 -type f -print
+          grep -RniE -A50 -B20 'print|printer|getPrinters|ipcMain|ipcRenderer|webContents' app/electron | head -n 1600 || true
+          echo '=== PACKAGE ==='
+          cat app/package.json
+          echo '=== CSS RECIBO / PRINT ==='
+          grep -niE -A40 -B20 '@media print|receipt|print' app/public/style.css | head -n 700 || true
