@@ -1,1 +1,1 @@
-Inspecionar HTML completo do Caixa e Produtos para hotfix 10.9.3.
+Inspecionar funções exatas de renderização do PDV e Produtos para hotfix 10.9.3.
