@@ -1,0 +1,23 @@
+name: Inspecionar UI 10.9.2
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['inspect-ui-1092-trigger.txt']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e localizar estruturas
+        shell: bash
+        run: |
+          unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          echo '=== HTML nav/sidebar ==='
+          grep -nEi 'sidebar|nav|menu|produtos' app/public/index.html | head -120 || true
+          echo '=== JS produtos ==='
+          grep -nEi 'renderProdutos|loadProdutos|produtos.*innerHTML|product-list|produto-list|produtosGrid|produtosList|#produtos' app/public/app.js | head -180 || true
+          echo '=== CSS layout ==='
+          grep -nEi 'sidebar|nav|\.layout|\.main|\.content|aside' app/public/style.css | head -180 || true
