@@ -1,0 +1,53 @@
+name: Diagnosticar usuários 10.8.5
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['debug-v10.8.5-users-trigger.txt']
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar app atual
+        shell: bash
+        run: |
+          rm -rf app
+          unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+          python scripts/apply-v10.8.0.py
+          python scripts/apply-v10.8.1.py
+          python scripts/apply-v10.8.2.py
+          python scripts/apply-v10.8.3.py
+          python scripts/apply-v10.8.4.py
+          python scripts/fix-v10.8.4-types.py
+      - name: Mostrar pontos de carregamento
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('app/public/app.js').read_text(encoding='utf-8')
+          for needle in ['async function boot','function boot','loadUsuarios()','data-s="config"','loadLojas()']:
+              print('\n===',needle,'===')
+              start=0
+              while True:
+                  i=s.find(needle,start)
+                  if i<0: break
+                  print(s[max(0,i-1000):min(len(s),i+2200)])
+                  print('\n---')
+                  start=i+1
+          PY
