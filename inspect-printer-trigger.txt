@@ -1,0 +1,1 @@
+Inspecionar fluxo de impressão atual após 10.7.8.
