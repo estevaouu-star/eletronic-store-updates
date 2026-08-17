@@ -32,20 +32,20 @@ jobs:
           python scripts/apply-v10.8.1.py
           python scripts/apply-v10.8.2.py
           python scripts/apply-v10.8.3.py
+          python scripts/apply-v10.8.4.py
       - name: Mostrar trechos relevantes
         shell: bash
         run: |
+          node --check app/public/app.js
           python - <<'PY'
           from pathlib import Path
           for f, needles in {
-            'app/src/server.ts':['type Usuario','app.get("/api/usuarios"','app.post("/api/usuarios"','app.put("/api/usuarios','app.get("/api/lojas"','function lojaIdReq','function auth'],
-            'app/public/app.js':['let lojaId','async function loadLojas','storeSelect','async function loadUsuarios','function newUsuario','async function editUsuario','async function boot'],
-            'app/public/index.html':['id="storeSelect"','id="config"']
+            'app/src/server.ts':['type Usuario','app.get("/api/usuarios"','app.post("/api/usuarios"','app.put("/api/usuarios','app.get("/api/lojas"','app.get("/api/lojas/resumo-geral"','app.get("/api/relatorios/consolidado"','app.post("/api/email/preparar-relatorio"','function lojaIdReq','function lojasPermitidasUsuario'],
+            'app/public/app.js':['function ajustarLojaAoUsuario','async function loadLojas','async function loadUsuarios','function newUsuario','async function editUsuario'],
           }.items():
             s=Path(f).read_text(encoding='utf-8')
             print('\n===== FILE',f,'=====')
             for n in needles:
               i=s.find(n)
-              if i>=0:
-                print('\n---',n,'---\n',s[max(0,i-900):i+4200])
+              if i>=0: print('\n---',n,'---\n',s[max(0,i-800):i+3600])
           PY
