@@ -17,12 +17,12 @@ jobs:
       - name: Aplicar patches
         shell: pwsh
         run: |
-          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py')
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py')
           foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
       - name: Aplicar ícone
         shell: pwsh
         run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
-      - name: Validar atualizador
+      - name: Validar 10.10.8
         shell: pwsh
         run: |
           node --check app/public/app.js
@@ -36,6 +36,8 @@ jobs:
           if (-not (Select-String -Path $preload -Pattern 'eletromixUpdater108' -SimpleMatch -Quiet)) { throw 'Bridge do atualizador ausente' }
           if (-not (Select-String -Path 'app/public/app.js' -Pattern 'updaterAction108' -SimpleMatch -Quiet)) { throw 'Frontend do atualizador ausente' }
           if (-not (Select-String -Path 'app/package.json' -Pattern 'electron-updater' -SimpleMatch -Quiet)) { throw 'Dependencia electron-updater ausente' }
+          if (-not (Select-String -Path 'app/src/server.ts' -Pattern 'salvarSessaoPersistente108' -SimpleMatch -Quiet)) { throw 'Sessao persistente no backend ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'corrigirCategorias108' -SimpleMatch -Quiet)) { throw 'Correcao das categorias ausente' }
       - name: Instalar e compilar
         working-directory: app
         run: |
@@ -51,4 +53,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v10.10.8 --target main --title "Eletromix 10.10.8 - Atualizador interno corrigido" --notes "Reconstrói o atualizador do aplicativo com IPC dedicado e electron-updater. Um clique verifica a versão e, se houver atualização, inicia o download dentro do app; após baixar, o botão passa para Instalar atualização e reinicia o Eletromix. Mantém as correções de categorias, Produtos, sessão e permissões das versões anteriores." app/release/*.exe app/release/*.yml app/release/*.blockmap
+          gh release delete v10.10.8 --yes 2>$null
+          git push origin --delete v10.10.8 2>$null
+          gh release create v10.10.8 --target main --title "Eletromix 10.10.8 - Atualizador, login e Caixa corrigidos" --notes "Reconstrói o atualizador interno. Corrige a sessão para continuar válida ao fechar e reabrir o aplicativo. Desfaz a deformação visual das categorias e deixa scroll somente na grade real de categorias. Mantém Produtos, permissões e pagamentos das versões anteriores." app/release/*.exe app/release/*.yml app/release/*.blockmap
