@@ -1,0 +1,27 @@
+name: Inspecionar autenticação detalhada
+on:
+  push:
+    branches: [main]
+    paths: ['inspect-auth-detail-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar fonte atual
+        run: |
+          rm -rf app; unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          for s in apply-v10.2.py fix-v10.2-types.py apply-v10.3.py apply-v10.4.py apply-v10.5.py apply-v10.7.py apply-v10.7.1.py apply-v10.7.2.py apply-v10.7.3.py apply-v10.7.4.py apply-v10.7.5.py apply-v10.7.6.py apply-v10.7.7.py apply-v10.7.8.py apply-v10.7.9.py apply-v10.8.0.py apply-v10.8.1.py; do python scripts/$s; done
+      - name: Mostrar frontend auth
+        run: |
+          echo '===== INDEX TOP ====='; sed -n '1,95p' app/public/index.html
+          echo '===== APP TOP ====='; sed -n '1,95p' app/public/app.js
+          echo '===== PRINT FUNCTIONS ====='; sed -n '180,250p' app/public/app.js
+          echo '===== BOOT BOTTOM ====='; tail -140 app/public/app.js
+      - name: Mostrar backend auth
+        run: |
+          echo '===== SERVER AUTH ====='; sed -n '390,545p' app/src/server.ts
+          echo '===== USERS ====='; sed -n '1585,1620p' app/src/server.ts
