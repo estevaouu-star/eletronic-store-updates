@@ -1,0 +1,63 @@
+name: Inspecionar Eletromix 10.8.1
+on:
+  push:
+    branches: [main]
+    paths: ['inspect-v10.8.1-trigger.txt']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar fonte atual
+        run: |
+          rm -rf app
+          unzip -q Eletromix-v10.1.0-source-for-release.zip -d app
+          python scripts/apply-v10.2.py
+          python scripts/fix-v10.2-types.py
+          python scripts/apply-v10.3.py
+          python scripts/apply-v10.4.py
+          python scripts/apply-v10.5.py
+          python scripts/apply-v10.7.py
+          python scripts/apply-v10.7.1.py
+          python scripts/apply-v10.7.2.py
+          python scripts/apply-v10.7.3.py
+          python scripts/apply-v10.7.4.py
+          python scripts/apply-v10.7.5.py
+          python scripts/apply-v10.7.6.py
+          python scripts/apply-v10.7.7.py
+          python scripts/apply-v10.7.8.py
+          python scripts/apply-v10.7.9.py
+          python scripts/apply-v10.8.0.py
+          python scripts/apply-v10.8.1.py
+      - name: Mostrar impressão e chamadas
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('app/public/app.js').read_text(encoding='utf-8')
+          for needle in ['directPrintReceipt','desktopPrinter.print','onclick="directPrintReceipt','addEventListener']:
+              print('\n===== '+needle+' =====')
+              pos=0
+              c=0
+              while True:
+                  i=s.find(needle,pos)
+                  if i<0: break
+                  c+=1
+                  print(f'--- match {c} at {i} ---')
+                  print(s[max(0,i-700):i+1800])
+                  pos=i+len(needle)
+                  if c>=12: break
+          print('\n===== HTML TOP/BODY =====')
+          h=Path('app/public/index.html').read_text(encoding='utf-8')
+          print(h[:7000])
+          PY
+      - name: Mostrar handler atual de impressão
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('app/electron/main.cjs').read_text(encoding='utf-8')
+          for needle in ['receiptImageToEscPos','ensureRawPrinterWorker','ipcMain.handle("printer:print"']:
+              i=s.find(needle)
+              print('\n===== '+needle+' =====')
+              print(s[max(0,i-800):i+9000] if i>=0 else 'NAO ENCONTRADO')
+          PY
