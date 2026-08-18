@@ -28,6 +28,8 @@ jobs:
           node --check app/public/app.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (-not (Select-String -Path 'app/src/server.ts' -Pattern 'app.put("/api/aparencia",auth,(req,res)=>{' -SimpleMatch -Quiet)) { throw 'Personalização ainda bloqueada por admin' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'imprimirOSTermica101016' -SimpleMatch -Quiet)) { throw 'Impressão térmica separada da OS ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'corrigirOS101018' -SimpleMatch -Quiet)) { throw 'Correção da unificação da OS ausente' }
           if (-not (Select-String -Path 'app/public/app.js' -Pattern 'confirmarPersonalizacao101018' -SimpleMatch -Quiet)) { throw 'Confirmação da personalização ausente' }
       - name: Instalar e compilar
         working-directory: app
@@ -44,4 +46,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v10.10.18 --target main --title "Eletromix 10.10.18 - Personalização realmente salva" --notes "Corrige a causa do salvamento voltar para a configuração anterior. A rota de aparência por loja ainda exigia administrador; agora vendedor também pode salvar a personalização dentro da loja permitida. Após salvar, o app recarrega do backend para confirmar o valor persistido." app/release/*.exe app/release/*.yml app/release/*.blockmap
+          gh release create v10.10.18 --target main --title "Eletromix 10.10.18 - OS e personalização corrigidas" --notes "Desfaz a unificação errada da Ordem de Serviço. Via cliente e Via garantia voltam a ser impressões separadas e usam o mesmo motor térmico direto/configuração de impressora do comprovante do Caixa, sem abrir janela de impressão do navegador. Também corrige o salvamento da Personalização por loja para vendedor." app/release/*.exe app/release/*.yml app/release/*.blockmap
