@@ -1,0 +1,73 @@
+name: Validar Acessos e Impressora 10.10.26
+on:
+  push:
+    branches: ['agent/validate-access-10-10-26']
+    paths: ['validation-v10.10.26-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py','apply-v10.10.25.py','apply-v10.10.26.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Validar código e interface
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/main.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/preload.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $checks = @(
+            @{Path='app/public/index.html'; Text='id="savePrinterBtn"'; Error='Botão Salvar impressora ausente'},
+            @{Path='app/public/app.js'; Text='es_printer_store_${Number(lojaId)||1}'; Error='Impressora não está separada por loja'},
+            @{Path='app/public/app.js'; Text="garantia?'Assinatura do funcionário':'Assinatura do cliente'"; Error='Assinatura da garantia incorreta'},
+            @{Path='app/src/server.ts'; Text='Um administrador não pode alterar a conta de outro administrador.'; Error='Proteção entre administradores ausente'},
+            @{Path='app/src/server.ts'; Text='acessoTodasLojas'; Error='Escopo de administrador ausente'},
+            @{Path='app/electron/main.cjs'; Text="['/S','--updated','--force-run']"; Error='Atualização silenciosa ausente'},
+            @{Path='app/electron/main.cjs'; Text='auth-session.json'; Error='Sessão persistente ausente'}
+          )
+          foreach($c in $checks){if(-not (Select-String -Path $c.Path -Pattern $c.Text -SimpleMatch -Quiet)){throw $c.Error}}
+          if(Select-String -Path app/public/index.html -Pattern 'id="cashBadge"' -SimpleMatch -Quiet){throw 'Caixa aberto continua no cabeçalho'}
+          $pkg = Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.26'){throw 'Versão incorreta'}
+          if($pkg.build.appId -ne 'com.eletromix.pdv'){throw 'appId mudou e poderia criar outro aplicativo'}
+          if(-not $pkg.build.nsis.oneClick -or $pkg.build.nsis.perMachine){throw 'Instalador silencioso por usuário não configurado'}
+      - name: Testar administradores e escopo das lojas
+        shell: pwsh
+        run: node tests/validate-v10.10.26.cjs
+      - name: Aplicar ícone do instalador
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Gerar instalador de teste
+        working-directory: app
+        run: npx electron-builder --win nsis --publish never
+      - name: Marcar validação aprovada
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.26-passed
+          git push origin -f validation-v10.10.26-passed
+      - name: Marcar validação reprovada
+        if: failure()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.26-failed
+          git push origin -f validation-v10.10.26-failed
