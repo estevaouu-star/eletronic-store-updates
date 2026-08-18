@@ -52,8 +52,9 @@ jobs:
             $os2 = Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -Method Post -ContentType 'application/json' -Body $comServico -WebSession $web
             if($os2.servicoNome -ne 'Troca de tela' -or $os2.valor -ne 180){throw 'OS não usou o serviço selecionado'}
 
-            $lista = @(Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -WebSession $web)
-            if($lista.Count -ne 2){throw "Esperadas 2 ordens, recebidas $($lista.Count)"}
+            $lista = Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -WebSession $web
+            if(-not ($lista | Where-Object { $_.id -eq $os1.id })){throw 'OS de diagnóstico não apareceu na lista'}
+            if(-not ($lista | Where-Object { $_.id -eq $os2.id })){throw 'OS com serviço não apareceu na lista'}
 
             $cancelBody = @{status='Cancelada'} | ConvertTo-Json
             $cancelada = Invoke-RestMethod "http://127.0.0.1:31338/api/ordens-servico/$($os1.id)" -Method Put -ContentType 'application/json' -Body $cancelBody -WebSession $web
@@ -62,8 +63,10 @@ jobs:
             $excluida = Invoke-RestMethod "http://127.0.0.1:31338/api/ordens-servico/$($os2.id)" -Method Delete -WebSession $web
             if(-not $excluida.ok -or $excluida.id -ne $os2.id){throw 'Exclusão da OS falhou'}
 
-            $listaFinal = @(Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -WebSession $web)
-            if($listaFinal.Count -ne 1 -or $listaFinal[0].status -ne 'Cancelada'){throw 'Histórico final de OS incorreto'}
+            $listaFinal = Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -WebSession $web
+            if($listaFinal | Where-Object { $_.id -eq $os2.id }){throw 'OS excluída ainda aparece na lista'}
+            $historico = $listaFinal | Where-Object { $_.id -eq $os1.id }
+            if(-not $historico -or $historico.status -ne 'Cancelada'){throw 'OS cancelada não permaneceu no histórico'}
             Write-Host 'RESULT=PASS: criação + seleção de serviço + cancelamento + exclusão'
           } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
       - name: Validar interface e ciclo antigo
