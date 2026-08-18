@@ -1,1 +1,1 @@
-Publicar Eletromix 10.10.16: corrigir persistência da aba Personalização por loja e restaurar valores após salvar/reabrir.
+Republicar Eletromix 10.10.16 hotfix: salvar personalização via PUT real no servidor, recarregar os valores persistidos por loja e impedir retorno à configuração anterior. Build 2.
