@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.12: adicionar perfis de layout por monitor, incluindo modo compacto para 1024x768.
