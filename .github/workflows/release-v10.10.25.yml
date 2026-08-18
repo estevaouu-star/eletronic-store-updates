@@ -1,0 +1,48 @@
+name: Publicar Eletromix 10.10.25
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.10.25-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirmar validação aprovada
+        shell: pwsh
+        run: |
+          git fetch --tags --force
+          if(-not (git tag --points-at HEAD | Select-String 'validation-v10.10.25-passed' -Quiet)){throw 'A validação v10.10.25 não está associada ao código publicado.'}
+      - name: Extrair fonte
+        shell: pwsh
+        run: Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar patches
+        shell: pwsh
+        run: |
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py','apply-v10.10.25.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Aplicar ícone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Instalar, compilar e validar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+          node --check public/app.js
+          node --check electron/main.cjs
+          node --check electron/preload.cjs
+      - name: Gerar instalador único
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v10.10.25 --target main --title "Eletromix 10.10.25 - Estabilidade e desempenho" --notes "Corrige venda excluída permanecendo no resumo visual, oculta os botões de impressão quando não existe ordem, reorganiza as vias do cliente, garantia e comprovante de venda, mantém o login após reiniciar ou atualizar e reduz trabalho de fundo para rodar melhor em computadores antigos. A atualização continua automática, silenciosa e reabre o Eletromix instalado." app/release/*.exe app/release/*.yml app/release/*.blockmap

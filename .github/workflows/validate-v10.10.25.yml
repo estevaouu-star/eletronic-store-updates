@@ -1,0 +1,132 @@
+name: Validar Correções e Desempenho 10.10.25
+on:
+  push:
+    branches: ['agent/validate-stability-10-10-25']
+    paths: ['validation-v10.10.25-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py','apply-v10.10.25.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Validar código e contrato visual
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/main.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/preload.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $checks = @(
+            @{Path='app/public/app.js'; Text="'#osList101023 .os-card-101023[data-os-id]'"; Error='Seletor seguro das ordens ausente'},
+            @{Path='app/public/app.js'; Text='receipt-structured-101025'; Error='Novo comprovante ausente'},
+            @{Path='app/public/app.js'; Text='performance-lite-101025'; Error='Modo leve ausente'},
+            @{Path='app/public/app.js'; Text='restoreAuthPromise101025'; Error='Bloqueio de restauração concorrente ausente'},
+            @{Path='app/public/style.css'; Text='#vendasMes101024[hidden]'; Error='Regra de histórico oculto ausente'},
+            @{Path='app/electron/main.cjs'; Text='auth-session.json'; Error='Sessão persistente do Electron ausente'},
+            @{Path='app/electron/main.cjs'; Text="['/S','--updated','--force-run']"; Error='Atualização silenciosa ausente'}
+          )
+          foreach($c in $checks){if(-not (Select-String -Path $c.Path -Pattern $c.Text -SimpleMatch -Quiet)){throw $c.Error}}
+          $pkg = Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.25'){throw 'Versão incorreta'}
+          if($pkg.build.appId -ne 'com.eletromix.pdv'){throw 'appId mudou e poderia criar outro aplicativo'}
+          if(-not $pkg.build.nsis.oneClick -or $pkg.build.nsis.perMachine){throw 'Instalador silencioso por usuário não configurado'}
+      - name: Testar venda excluída, ordem e sessão após reinício
+        shell: pwsh
+        run: |
+          $testRoot = Join-Path $env:RUNNER_TEMP 'eletromix-101025-test'
+          New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+          $env:ELECTRON_STORE_DATA_DIR = $testRoot
+          $env:ELECTRON_STORE_PORT = '31341'
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 80;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31341/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+
+          $env:TEST_PASSWORD = [guid]::NewGuid().ToString('N')
+          $env:TEST_DB = Join-Path $testRoot 'database.json'
+          $env:TEST_SESSION = Join-Path $testRoot 'session-test.json'
+          node -e "const fs=require('fs'),crypto=require('crypto');const p=process.env.TEST_DB,d=JSON.parse(fs.readFileSync(p,'utf8'));d.usuarios[0].login='stability-test';d.usuarios[0].senhaHash=crypto.scryptSync(process.env.TEST_PASSWORD,'eletronic-store-local-v1',64).toString('hex');fs.writeFileSync(p,JSON.stringify(d,null,2))"
+
+          @'
+          (async()=>{
+            const fs=require('fs'),base='http://127.0.0.1:31341';
+            const request=async(path,opt={})=>{const r=await fetch(base+path,opt),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(path+' '+r.status+' '+JSON.stringify(d));return d};
+            const login=await request('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'stability-test',senha:process.env.TEST_PASSWORD})});
+            const headers={Authorization:'Bearer '+login.token,'Content-Type':'application/json','X-Store-Id':'1'};
+            const vendors=await request('/api/vendedores',{headers}),products=await request('/api/produtos',{headers}),services=await request('/api/servicos',{headers});
+            const vendor=vendors.find(x=>x.ativo),product=products.find(x=>x.ativo&&x.estoque>0),service=services.find(x=>x.ativo);
+            if(!vendor||!product||!service)throw new Error('Dados iniciais ausentes');
+
+            const order=await request('/api/ordens-servico',{method:'POST',headers,body:JSON.stringify({clienteNome:'Cliente teste',telefone:'11999999999',aparelho:'Celular',marca:'Teste',modelo:'T1',servicoId:service.id,problemaRelatado:'Teste funcional'})});
+            if(order.servicoId!==service.id||order.servicoNome!==service.nome)throw new Error('Serviço da OS não foi selecionado');
+            await request('/api/ordens-servico/'+order.id,{method:'DELETE',headers});
+            const orders=await request('/api/ordens-servico',{headers});if(orders.some(x=>x.id===order.id))throw new Error('OS excluída ainda aparece');
+
+            const total=Number(product.precoVenda),sale=await request('/api/vendas',{method:'POST',headers,body:JSON.stringify({itens:[{produtoId:product.id,quantidade:1}],vendedorId:vendor.id,pagamentos:[{forma:'Dinheiro',valor:total,recebido:total+20}]})});
+            const date=new Date(sale.criadoEm).toLocaleDateString('sv-SE'),month=date.slice(0,7);
+            await request('/api/vendas/'+sale.id+'/cancelar',{method:'POST',headers});
+            await request('/api/vendas/'+sale.id,{method:'DELETE',headers});
+            const day=await request('/api/vendas/consulta?modo=dia&data='+date,{headers}),monthly=await request('/api/vendas/consulta?modo=mes&mes='+month,{headers});
+            if(day.vendas.some(x=>x.id===sale.id)||day.resumo.vendas!==0)throw new Error('Venda excluída ainda aparece no dia');
+            if(monthly.dias.some(x=>x.data===date)||monthly.resumo.vendas!==0)throw new Error('Venda excluída ainda aparece no mês');
+            fs.writeFileSync(process.env.TEST_SESSION,JSON.stringify({token:login.token,userId:login.usuario.id}));
+            console.log('RESULT=PASS: OS + exclusão da venda');
+          })().catch(error=>{console.error(error);process.exit(1)});
+          '@ | Set-Content -Path (Join-Path $env:RUNNER_TEMP 'phase-one.cjs') -Encoding utf8
+
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 80;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31341/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+            node (Join-Path $env:RUNNER_TEMP 'phase-one.cjs')
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+
+          @'
+          (async()=>{
+            const fs=require('fs'),saved=JSON.parse(fs.readFileSync(process.env.TEST_SESSION,'utf8'));
+            const r=await fetch('http://127.0.0.1:31341/api/me',{headers:{Authorization:'Bearer '+saved.token,'X-Store-Id':'1'}}),me=await r.json();
+            if(!r.ok||me.id!==saved.userId)throw new Error('Sessão não sobreviveu ao reinício: '+JSON.stringify(me));
+            console.log('RESULT=PASS: login preservado após reinício/atualização');
+          })().catch(error=>{console.error(error);process.exit(1)});
+          '@ | Set-Content -Path (Join-Path $env:RUNNER_TEMP 'phase-two.cjs') -Encoding utf8
+
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 80;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31341/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+            node (Join-Path $env:RUNNER_TEMP 'phase-two.cjs')
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+      - name: Gerar instalador de teste
+        working-directory: app
+        run: npx electron-builder --win nsis --publish never
+      - name: Marcar validação aprovada
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.25-passed
+          git push origin -f validation-v10.10.25-passed
+      - name: Marcar validação reprovada
+        if: failure()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.25-failed
+          git push origin -f validation-v10.10.25-failed
