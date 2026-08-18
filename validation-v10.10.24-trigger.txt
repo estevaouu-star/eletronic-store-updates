@@ -1,0 +1,1 @@
+Executar validação isolada do pagamento com troco e da consulta de vendas 10.10.24.

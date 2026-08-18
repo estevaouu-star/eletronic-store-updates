@@ -1,0 +1,95 @@
+name: Validar Pagamento e Vendas 10.10.24
+on:
+  push:
+    branches: ['agent/validate-payment-10-10-24']
+    paths: ['validation-v10.10.24-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Testar dinheiro acima do total e consultas por período
+        shell: pwsh
+        run: |
+          $testRoot = Join-Path $env:RUNNER_TEMP 'eletromix-payment-test'
+          New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+          $env:ELECTRON_STORE_DATA_DIR = $testRoot
+          $env:ELECTRON_STORE_PORT = '31340'
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 60;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31340/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+
+          $env:PAYMENT_TEST_PASSWORD = [guid]::NewGuid().ToString('N')
+          $env:PAYMENT_TEST_DB = Join-Path $testRoot 'database.json'
+          node -e "const fs=require('fs'),crypto=require('crypto');const p=process.env.PAYMENT_TEST_DB,d=JSON.parse(fs.readFileSync(p,'utf8'));d.usuarios[0].login='payment-test';d.usuarios[0].senhaHash=crypto.scryptSync(process.env.PAYMENT_TEST_PASSWORD,'eletronic-store-local-v1',64).toString('hex');fs.writeFileSync(p,JSON.stringify(d,null,2))"
+
+          @'
+          (async()=>{
+            const base='http://127.0.0.1:31340';
+            const loginResponse=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'payment-test',senha:process.env.PAYMENT_TEST_PASSWORD})});
+            const login=await loginResponse.json();if(!loginResponse.ok)throw new Error('Login de teste falhou');
+            const headers={Authorization:'Bearer '+login.token,'Content-Type':'application/json','X-Store-Id':'1'};
+            const vendors=await fetch(base+'/api/vendedores',{headers}).then(r=>r.json());
+            const products=await fetch(base+'/api/produtos',{headers}).then(r=>r.json());
+            const vendor=vendors.find(v=>v.ativo),product=products.find(p=>p.ativo&&p.estoque>0);
+            if(!vendor||!product)throw new Error('Dados iniciais de venda ausentes');
+            const total=Number(product.precoVenda),recebido=total+50;
+            const saleResponse=await fetch(base+'/api/vendas',{method:'POST',headers,body:JSON.stringify({itens:[{produtoId:product.id,quantidade:1}],vendedorId:vendor.id,pagamentos:[{forma:'Dinheiro',valor:total,recebido}]})});
+            const sale=await saleResponse.json();if(!saleResponse.ok)throw new Error(JSON.stringify(sale));
+            if(Math.abs(sale.troco-50)>.001)throw new Error('Troco incorreto: '+sale.troco);
+            if(sale.pagamentos[0].valor!==total||sale.pagamentos[0].recebido!==recebido)throw new Error('Pagamento em dinheiro não preservou aplicado/recebido');
+            const hoje=new Date().toLocaleDateString('sv-SE');
+            const dayResponse=await fetch(base+'/api/vendas/consulta?modo=dia&data='+hoje,{headers}),day=await dayResponse.json();
+            if(!dayResponse.ok||day.vendas.length!==1||day.vendas[0].id!==sale.id)throw new Error('Consulta diária incorreta');
+            const monthResponse=await fetch(base+'/api/vendas/consulta?modo=mes&mes='+hoje.slice(0,7),{headers}),month=await monthResponse.json();
+            if(!monthResponse.ok||month.dias.length!==1||month.dias[0].vendas!==1||month.dias[0].total!==total)throw new Error('Resumo mensal incorreto');
+            console.log('RESULT=PASS: dinheiro acima do total + troco + dia + mês');
+          })().catch(error=>{console.error(error);process.exit(1)});
+          '@ | Set-Content -Path (Join-Path $env:RUNNER_TEMP 'payment-api-test.cjs') -Encoding utf8
+
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 60;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31340/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+            node (Join-Path $env:RUNNER_TEMP 'payment-api-test.cjs')
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+      - name: Validar interface personalizada
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'trocoPagamento101024' -SimpleMatch -Quiet)) { throw 'Cálculo de troco ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'mostrarVendaFinalizada101024' -SimpleMatch -Quiet)) { throw 'Tela final da venda ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern '/api/vendas/consulta' -SimpleMatch -Quiet)) { throw 'Consulta leve de vendas ausente' }
+          if (-not (Select-String -Path 'app/public/style.css' -Pattern 'var(--accent)' -SimpleMatch -Quiet)) { throw 'Cores da personalização ausentes' }
+          if (-not (Select-String -Path 'app/public/index.html' -Pattern 'data-vendas-mode="month"' -SimpleMatch -Quiet)) { throw 'Filtro mensal ausente' }
+      - name: Marcar validação aprovada
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.24-passed
+          git push origin -f validation-v10.10.24-passed
+      - name: Marcar validação reprovada
+        if: failure()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.24-failed
+          git push origin -f validation-v10.10.24-failed
