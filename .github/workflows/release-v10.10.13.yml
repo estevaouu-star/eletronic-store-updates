@@ -1,0 +1,48 @@
+name: Publicar Eletromix 10.10.13
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.10.13-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar patches
+        shell: pwsh
+        run: |
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Aplicar ícone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Validar
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'corrigirCaixa1024_101013' -SimpleMatch -Quiet)) { throw 'Correcao 1024 ausente' }
+          if (-not (Select-String -Path 'app/public/style.css' -Pattern 'pdv1024-shell-101013' -SimpleMatch -Quiet)) { throw 'Layout duas colunas 1024 ausente' }
+          if (-not (Select-String -Path 'app/public/style.css' -Pattern 'pdv1024-products-101013' -SimpleMatch -Quiet)) { throw 'Scroll de produtos 1024 ausente' }
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v10.10.13 --target main --title "Eletromix 10.10.13 - Caixa 1024x768 corrigido" --notes "Corrige o perfil 1024x768 para manter o mesmo desenho do Caixa normal em duas colunas. Carrinho à esquerda e catálogo à direita; categorias e produtos têm scroll interno próprio, sem jogar os produtos para baixo da tela. Compacta campos e totais para caber no monitor antigo." app/release/*.exe app/release/*.yml app/release/*.blockmap
