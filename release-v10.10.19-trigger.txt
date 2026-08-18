@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.19 com login sem diferença entre maiúsculas/minúsculas, navegação das abas consolidada e Produtos alinhados ao filtro de pendências do Dashboard.
