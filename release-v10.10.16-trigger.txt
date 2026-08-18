@@ -1,1 +1,1 @@
-Republicar Eletromix 10.10.16 hotfix: salvar personalização via PUT real no servidor, recarregar os valores persistidos por loja e impedir retorno à configuração anterior. Build 2.
+Republicar Eletromix 10.10.16 hotfix: salvamento da personalização por loja confirmado no backend. Build 3 - 2026-08-18 13:50 BRT.
