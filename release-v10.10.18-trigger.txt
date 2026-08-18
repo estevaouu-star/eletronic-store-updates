@@ -1,1 +1,1 @@
-Republicar Eletromix 10.10.18: desfazer via cliente + garantia unificada, usar impressão térmica direta do comprovante em duas vias separadas e corrigir persistência da Personalização por loja.
+Republicar Eletromix 10.10.18 após corrigir o salvamento da Personalização: PUT com Content-Type JSON, leitura correta da Response, confirmação por GET e permissão por loja para vendedor. Build disparado novamente em 2026-08-18.
