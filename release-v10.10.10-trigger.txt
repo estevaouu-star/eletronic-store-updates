@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.10: atualizador direto com instalador em pasta estável e sessão persistente salva pelo Electron em userData.
