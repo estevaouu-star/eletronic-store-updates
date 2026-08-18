@@ -111,6 +111,9 @@ jobs:
             node (Join-Path $env:RUNNER_TEMP 'phase-two.cjs')
             if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+      - name: Aplicar ícone do instalador
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
       - name: Gerar instalador de teste
         working-directory: app
         run: npx electron-builder --win nsis --publish never
