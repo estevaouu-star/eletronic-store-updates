@@ -1,1 +1,2 @@
 Validar Eletromix v10.10.25: vendas, OS, sessão, impressão e desempenho.
+Reexecução com o ícone correto aplicado antes da geração do instalador.
