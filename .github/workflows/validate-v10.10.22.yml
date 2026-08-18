@@ -1,0 +1,79 @@
+name: Validar sessão 10.10.22
+on:
+  push:
+    branches: ['agent/validate-session-10-10-22']
+    paths: ['validation-v10.10.22-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Testar login após reinício completo
+        shell: pwsh
+        run: |
+          $testRoot = Join-Path $env:RUNNER_TEMP 'eletromix-session-restart'
+          New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+          $env:ELECTRON_STORE_DATA_DIR = $testRoot
+          $env:ELECTRON_STORE_PORT = '31337'
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 60;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31337/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+
+          $env:SESSION_TEST_PASSWORD = [guid]::NewGuid().ToString('N')
+          $env:SESSION_TEST_DB = Join-Path $testRoot 'database.json'
+          node -e "const fs=require('fs'),crypto=require('crypto');const p=process.env.SESSION_TEST_DB,d=JSON.parse(fs.readFileSync(p,'utf8'));d.usuarios[0].login='session-test';d.usuarios[0].senhaHash=crypto.scryptSync(process.env.SESSION_TEST_PASSWORD,'eletronic-store-local-v1',64).toString('hex');fs.writeFileSync(p,JSON.stringify(d,null,2))"
+
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 60;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31337/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+            $web = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+            $body = @{login='session-test';senha=$env:SESSION_TEST_PASSWORD} | ConvertTo-Json
+            $login = Invoke-RestMethod 'http://127.0.0.1:31337/api/login' -Method Post -ContentType 'application/json' -Body $body -WebSession $web
+            if(-not $login.token){throw 'Login não criou token'}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 60;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31337/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+            $me = Invoke-RestMethod 'http://127.0.0.1:31337/api/me' -WebSession $web
+            if($me.login -ne 'session-test'){throw 'A sessão não voltou depois do reinício'}
+            $db = Get-Content (Join-Path $testRoot 'database.json') -Raw | ConvertFrom-Json
+            if($db.sessoesPersistentes.Count -lt 1){throw 'Sessão não persistiu no banco'}
+            Write-Host 'RESULT=PASS: login -> servidor encerrado -> servidor novo -> sessão restaurada'
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+      - name: Validar saída e atualização
+        shell: pwsh
+        run: |
+          if (Select-String -Path 'app/public/index.html' -Pattern 'id="logoutBtn"' -SimpleMatch -Quiet) { throw 'Saída ainda chama logout antigo' }
+          if (-not (Select-String -Path 'app/public/index.html' -Pattern 'id="exitAppBtn"' -SimpleMatch -Quiet)) { throw 'Botão de fechar ausente' }
+          if (-not (Select-String -Path 'app/electron/main.cjs' -Pattern "'/S','--updated','--force-run'" -SimpleMatch -Quiet)) { throw 'Atualização silenciosa ausente' }
+      - name: Marcar validação aprovada
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.22-passed
+          git push origin -f validation-v10.10.22-passed
+      - name: Marcar validação reprovada
+        if: failure()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.22-failed
+          git push origin -f validation-v10.10.22-failed
