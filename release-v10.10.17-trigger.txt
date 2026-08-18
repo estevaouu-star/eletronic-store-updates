@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.17: unificar via cliente e garantia no modelo de comprovante térmico, sem abrir janela separada.
