@@ -1,0 +1,94 @@
+name: Validar Ordens de Serviço 10.10.23
+on:
+  push:
+    branches: ['agent/validate-os-10-10-23']
+    paths: ['validation-v10.10.23-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Testar criação e seleção de serviços
+        shell: pwsh
+        run: |
+          $testRoot = Join-Path $env:RUNNER_TEMP 'eletromix-os-test'
+          New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+          $env:ELECTRON_STORE_DATA_DIR = $testRoot
+          $env:ELECTRON_STORE_PORT = '31338'
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 60;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31338/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+
+          $env:OS_TEST_PASSWORD = [guid]::NewGuid().ToString('N')
+          $env:OS_TEST_DB = Join-Path $testRoot 'database.json'
+          node -e "const fs=require('fs'),crypto=require('crypto');const p=process.env.OS_TEST_DB,d=JSON.parse(fs.readFileSync(p,'utf8'));d.usuarios[0].login='os-test';d.usuarios[0].senhaHash=crypto.scryptSync(process.env.OS_TEST_PASSWORD,'eletronic-store-local-v1',64).toString('hex');fs.writeFileSync(p,JSON.stringify(d,null,2))"
+
+          $process = Start-Process node -ArgumentList 'app/dist/server.js' -PassThru -WindowStyle Hidden
+          try {
+            for($i=0;$i -lt 60;$i++){try{Invoke-WebRequest 'http://127.0.0.1:31338/' -UseBasicParsing | Out-Null;break}catch{Start-Sleep -Milliseconds 200}}
+            $web = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+            $loginBody = @{login='os-test';senha=$env:OS_TEST_PASSWORD} | ConvertTo-Json
+            Invoke-RestMethod 'http://127.0.0.1:31338/api/login' -Method Post -ContentType 'application/json' -Body $loginBody -WebSession $web | Out-Null
+
+            $diagnostico = @{clienteNome='Cliente diagnóstico';aparelho='Celular';servicoId='';problemaRelatado='Teste de diagnóstico'} | ConvertTo-Json
+            $os1 = Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -Method Post -ContentType 'application/json' -Body $diagnostico -WebSession $web
+            if($os1.servicoNome -ne 'Diagnóstico'){throw 'OS de diagnóstico incorreta'}
+
+            $comServico = @{clienteNome='Cliente serviço';aparelho='Celular';servicoId='1';problemaRelatado='Teste com serviço'} | ConvertTo-Json
+            $os2 = Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -Method Post -ContentType 'application/json' -Body $comServico -WebSession $web
+            if($os2.servicoNome -ne 'Troca de tela' -or $os2.valor -ne 180){throw 'OS não usou o serviço selecionado'}
+
+            $lista = @(Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -WebSession $web)
+            if($lista.Count -ne 2){throw "Esperadas 2 ordens, recebidas $($lista.Count)"}
+
+            $cancelBody = @{status='Cancelada'} | ConvertTo-Json
+            $cancelada = Invoke-RestMethod "http://127.0.0.1:31338/api/ordens-servico/$($os1.id)" -Method Put -ContentType 'application/json' -Body $cancelBody -WebSession $web
+            if($cancelada.status -ne 'Cancelada'){throw 'Cancelamento da OS não foi salvo'}
+
+            $excluida = Invoke-RestMethod "http://127.0.0.1:31338/api/ordens-servico/$($os2.id)" -Method Delete -WebSession $web
+            if(-not $excluida.ok -or $excluida.id -ne $os2.id){throw 'Exclusão da OS falhou'}
+
+            $listaFinal = @(Invoke-RestMethod 'http://127.0.0.1:31338/api/ordens-servico' -WebSession $web)
+            if($listaFinal.Count -ne 1 -or $listaFinal[0].status -ne 'Cancelada'){throw 'Histórico final de OS incorreto'}
+            Write-Host 'RESULT=PASS: criação + seleção de serviço + cancelamento + exclusão'
+          } finally { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; $process.WaitForExit() }
+      - name: Validar interface e ciclo antigo
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'injectOSPrint101015=function(){}' -SimpleMatch -Quiet)) { throw 'Ciclo antigo não neutralizado' }
+          if (-not (Select-String -Path 'app/public/index.html' -Pattern 'osList101023' -SimpleMatch -Quiet)) { throw 'Nova lista de OS ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'osServiceOptions101023' -SimpleMatch -Quiet)) { throw 'Select de serviços ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'deleteOS101023' -SimpleMatch -Quiet)) { throw 'Ação de excluir OS ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'cancelOS101023' -SimpleMatch -Quiet)) { throw 'Ação de cancelar OS ausente' }
+      - name: Marcar validação aprovada
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.23-passed
+          git push origin -f validation-v10.10.23-passed
+      - name: Marcar validação reprovada
+        if: failure()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.23-failed
+          git push origin -f validation-v10.10.23-failed

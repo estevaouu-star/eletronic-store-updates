@@ -1,0 +1,1 @@
+Executar validação isolada de Ordens de Serviço 10.10.23 antes de publicar.
