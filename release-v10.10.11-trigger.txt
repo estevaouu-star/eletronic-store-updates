@@ -1,0 +1,1 @@
+Publicar Eletromix 10.10.11: login lembrado com safeStorage e manter atualizador direto da 10.10.10.
