@@ -1,1 +1,1 @@
-release 10.10.18
+Republicar Eletromix 10.10.18: desfazer via cliente + garantia unificada, usar impressão térmica direta do comprovante em duas vias separadas e corrigir persistência da Personalização por loja.
