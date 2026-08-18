@@ -27,8 +27,9 @@ jobs:
         run: |
           node --check app/public/app.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'savePers101016' -SimpleMatch -Quiet)) { throw 'Persistencia da Personalizacao ausente' }
-          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'restorePers101016' -SimpleMatch -Quiet)) { throw 'Restauracao da Personalizacao ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'saveApar101016' -SimpleMatch -Quiet)) { throw 'Salvamento da personalizacao ausente' }
+          if (-not (Select-String -Path 'app/public/app.js' -Pattern 'reloadApar101016' -SimpleMatch -Quiet)) { throw 'Recarga da personalizacao ausente' }
+          if (-not (Select-String -Path 'app/src/server.ts' -Pattern 'app.put("/api/aparencia",auth,(req,res)=>{' -SimpleMatch -Quiet)) { throw 'Permissao de salvar aparencia ausente' }
       - name: Instalar e compilar
         working-directory: app
         run: |
@@ -44,4 +45,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v10.10.16 --target main --title "Eletromix 10.10.16 - Personalização corrigida" --notes "Corrige o salvamento da aba Personalização. Os campos visuais passam a ser persistidos por loja neste computador e restaurados ao reabrir a aba, evitando voltar para a configuração anterior após clicar em Salvar." app/release/*.exe app/release/*.yml app/release/*.blockmap
+          gh release create v10.10.16 --target main --title "Eletromix 10.10.16 - Personalização corrigida" --notes "Corrige o botão Salvar personalização: cores, nome, ícone e logos são persistidos no servidor por loja e recarregados ao abrir novamente a aba. Vendedor também pode salvar a personalização da própria loja." app/release/*.exe app/release/*.yml app/release/*.blockmap
