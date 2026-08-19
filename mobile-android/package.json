@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android:add": "cap add android",
+    "android:permissions": "node scripts/configure-android.mjs",
     "android:assets": "capacitor-assets generate --android --assetPath assets --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#111318' --splashBackgroundColorDark '#111318'",
     "android:sync": "cap sync android",
     "android:build": "cd android && ./gradlew assembleDebug"

@@ -39,6 +39,10 @@ jobs:
         working-directory: mobile-android
         run: npx cap add android
 
+      - name: Enable native camera permission
+        working-directory: mobile-android
+        run: npm run android:permissions
+
       - name: Generate Eletromix icons
         working-directory: mobile-android
         run: npm run android:assets
