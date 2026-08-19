@@ -34,9 +34,9 @@ async function request(url, options={}, expected=200){
     await waitServer();
     const login=await request('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:'admin',senha:'admin123'})});
     const headers={Authorization:`Bearer ${login.token}`,'Content-Type':'application/json','X-Store-Id':'1'};
-    const imageUrl='https://eletromix-mobile.estevaouu.chatgpt.site/assets/produto-teste.jpg';
+    const imagemUrl='https://eletromix-mobile.estevaouu.chatgpt.site/assets/produto-teste.jpg';
     const created=await request('/api/produtos',{method:'POST',headers,body:JSON.stringify({codigo:'IMG-101027',nome:'Produto com imagem',categoria:'Teste',marca:'Eletromix',imagemUrl,precoCusto:10,precoVenda:20,estoque:1})},201);
-    if(created.imagemUrl!==imageUrl)throw new Error('Imagem não foi salva no cadastro do produto.');
+    if(created.imagemUrl!==imagemUrl)throw new Error('Imagem não foi salva no cadastro do produto.');
     const updatedUrl='https://eletromix-mobile.estevaouu.chatgpt.site/assets/produto-atualizado.jpg';
     const updated=await request(`/api/produtos/${created.id}`,{method:'PUT',headers,body:JSON.stringify({imagemUrl:updatedUrl})});
     if(updated.imagemUrl!==updatedUrl)throw new Error('Imagem não foi atualizada.');
