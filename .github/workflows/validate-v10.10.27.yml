@@ -1,0 +1,45 @@
+name: Validar Fotos de Produtos 10.10.27
+on:
+  push:
+    branches: ['agent/eletromix-mobile-apk', main]
+    paths:
+      - 'scripts/apply-v10.10.27.py'
+      - 'validation-v10.10.27-trigger.txt'
+      - '.github/workflows/validate-v10.10.27.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py','apply-v10.10.25.py','apply-v10.10.26.py','apply-v10.10.27.py')
+          foreach($f in $files){ python "scripts/$f"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Validar código e interface
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $checks = @(
+            @{Path='app/public/app.js'; Text='id="produtoImagemArquivo"'; Error='Seletor de foto no desktop ausente'},
+            @{Path='app/public/app.js'; Text='compactarImagemProduto101027'; Error='Compressão de foto ausente'},
+            @{Path='app/public/app.js'; Text='pdv1094-product-photo'; Error='Foto não aparece no PDV'},
+            @{Path='app/src/server.ts'; Text='product-image-sync'; Error='Sincronização da foto ausente'},
+            @{Path='app/src/server.ts'; Text='imagemUrl?:string'; Error='Campo de foto ausente'},
+            @{Path='app/public/style.css'; Text='body[data-monitor-profile="1024x768"] #caixa .pdv1094-product-photo'; Error='Proteção para monitor antigo ausente'},
+            @{Path='app/public/style.css'; Text='object-fit:contain'; Error='Enquadramento seguro da foto ausente'}
+          )
+          foreach($c in $checks){if(-not (Select-String -Path $c.Path -Pattern $c.Text -SimpleMatch -Quiet)){throw $c.Error}}
+          if(Select-String -Path app/public/app.js -Pattern 'capture="environment"' -SimpleMatch -Quiet){throw 'O desktop não deve forçar a câmera'}
+          $pkg = Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.27'){throw 'Versão incorreta'}

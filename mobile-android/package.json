@@ -1,0 +1,20 @@
+{
+  "name": "eletromix-mobile-android",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "android:add": "cap add android",
+    "android:assets": "capacitor-assets generate --android --assetPath assets --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#111318' --splashBackgroundColorDark '#111318'",
+    "android:sync": "cap sync android",
+    "android:build": "cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/core": "8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.0",
+    "typescript": "5.9.3"
+  }
+}
