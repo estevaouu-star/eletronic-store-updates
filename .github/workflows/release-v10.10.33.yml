@@ -1,0 +1,52 @@
+name: Publicar Eletromix 10.10.33
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.10.33-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = Get-ChildItem scripts/apply-v*.py | Sort-Object { [version](($_.BaseName -replace '^apply-v','') -replace '-fix$','') }
+          foreach($file in $files){ python $file.FullName; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+          if(Test-Path scripts/fix-v10.2-types.py){python scripts/fix-v10.2-types.py;if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+          if(Test-Path scripts/fix-v10.8.4-types.py){python scripts/fix-v10.8.4-types.py;if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+      - name: Validar Ordem de Serviço mobile
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.33'){throw 'Versão incorreta'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'abrirOSMobile101033' -SimpleMatch -Quiet)){throw 'Abertura mobile da OS ausente'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'osMobileLauncher101033' -SimpleMatch -Quiet)){throw 'Atalho mobile da OS ausente'}
+          if(-not (Select-String -Path app/public/app.js -Pattern "api('/api/ordens-servico'" -SimpleMatch -Quiet)){throw 'Criação compartilhada da OS ausente'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'cancelOS101023' -SimpleMatch -Quiet)){throw 'Cancelar OS ausente'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'deleteOS101023' -SimpleMatch -Quiet)){throw 'Excluir OS ausente'}
+          if(-not (Select-String -Path app/public/style.css -Pattern 'os-mobile-ready-101033' -SimpleMatch -Quiet)){throw 'Layout mobile da OS ausente'}
+      - name: Aplicar ícone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar versão
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v10.10.33 --target main --title "Eletromix 10.10.33 - Ordem de Serviço no Mobile" --notes "Habilita a Ordem de Serviço em telas móveis, com criação, consulta, atualização, status, cancelamento e exclusão usando os mesmos dados da versão desktop. Mantém as correções da 10.10.32." app/release/*.exe app/release/*.yml app/release/*.blockmap
