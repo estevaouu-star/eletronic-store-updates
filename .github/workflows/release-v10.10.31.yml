@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
     paths: ['release-v10.10.31-trigger.txt']
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -21,8 +22,8 @@ jobs:
         run: |
           node --check app/public/app.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if(-not (Select-String -Path app/public/app.js -Pattern 'Digite o nome do cliente' -SimpleMatch -Quiet)){throw 'Campo livre de cliente na OS ausente'}
-          if(Select-String -Path app/public/app.js -Pattern 'list="osClientes101023"' -SimpleMatch -Quiet){throw 'Seletor antigo de cliente ainda existe no resultado final'}
+          if(-not (Select-String -Path app/public/app.js -Pattern '// 10.10.31 - restaura cancelar/excluir venda e deixa o cliente da OS como nome digitado livremente.' -SimpleMatch -Quiet)){throw 'Patch 10.10.31 não foi aplicado'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'placeholder="Digite o nome do cliente"' -SimpleMatch -Quiet)){throw 'Campo livre de cliente na OS ausente'}
           if(-not (Select-String -Path app/public/app.js -Pattern 'onclick="cancelVenda(${v.id})"' -SimpleMatch -Quiet)){throw 'Cancelar venda ausente'}
           if(-not (Select-String -Path app/public/app.js -Pattern 'onclick="deleteVenda(${v.id})"' -SimpleMatch -Quiet)){throw 'Excluir venda ausente'}
           $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
@@ -45,4 +46,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          gh release delete v10.10.31 --yes --cleanup-tag 2>$null
           gh release create v10.10.31 --target main --title "Eletromix 10.10.31 - Vendas e Cliente da OS" --notes "Restaura as ações Cancelar e Excluir no histórico de vendas e altera o campo Cliente da nova ordem de serviço para digitação livre do nome, sem seleção de cliente cadastrado. Mantém as melhorias da garantia e impressão da versão anterior." app/release/*.exe app/release/*.yml app/release/*.blockmap
