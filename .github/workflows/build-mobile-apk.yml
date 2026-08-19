@@ -1,0 +1,69 @@
+name: Build Eletromix APK
+
+on:
+  pull_request:
+    paths:
+      - "mobile-android/**"
+      - ".github/workflows/build-mobile-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile-android/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        working-directory: mobile-android
+        run: npm ci
+
+      - name: Create Android project
+        working-directory: mobile-android
+        run: npx cap add android
+
+      - name: Enable native camera permission
+        working-directory: mobile-android
+        run: npm run android:permissions
+
+      - name: Generate Eletromix icons
+        working-directory: mobile-android
+        run: npm run android:assets
+
+      - name: Sync Capacitor
+        working-directory: mobile-android
+        run: npx cap sync android
+
+      - name: Build installable APK
+        working-directory: mobile-android/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Name APK
+        run: cp mobile-android/android/app/build/outputs/apk/debug/app-debug.apk Eletromix-Mobile.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eletromix-Mobile-APK
+          path: Eletromix-Mobile.apk
+          if-no-files-found: error
+          retention-days: 30
