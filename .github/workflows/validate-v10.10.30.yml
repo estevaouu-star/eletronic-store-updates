@@ -1,0 +1,73 @@
+name: Validar Garantia da OS 10.10.30
+on:
+  push:
+    branches: ['agent/validate-os-warranty-10-10-30']
+    paths: ['validation-v10.10.30-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py','apply-v10.10.25.py','apply-v10.10.26.py','apply-v10.10.27.py','apply-v10.10.28.py','apply-v10.10.29.py','apply-v10.10.30.py')
+          foreach($file in $files){ python "scripts/$file"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Validar garantia e impressão
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check app/electron/main.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $serverChecks = @(
+            @{Text='prontoEm?:string; garantiaAte?:string;'; Error='Datas da garantia não estão no modelo da OS'},
+            @{Text='function garantiaAte101030(inicio:string)'; Error='Cálculo de três meses não existe'},
+            @{Text='&&!o.prontoEm){o.prontoEm=now();o.garantiaAte=garantiaAte101030(o.prontoEm)}'; Error='A garantia pode reiniciar ou não começa ao marcar Pronto'},
+            @{Text='for(const o of lista)changed=garantirDatasOS101030(o,true)||changed'; Error='Ordens sincronizadas não recebem migração segura'}
+          )
+          foreach($check in $serverChecks){if(-not (Select-String -Path app/src/server.ts -Pattern $check.Text -SimpleMatch -Quiet)){throw $check.Error}}
+          $clientChecks = @(
+            @{Text='os-via-loja-101030'; Error='Botão da via da loja não existe'},
+            @{Text="title=garantia?'VIA DE GARANTIA':loja?'VIA DA LOJA':'VIA DO CLIENTE'"; Error='As três vias não estão separadas'},
+            @{Text='osPodeGarantia101030(o)'; Error='A via de garantia não está condicionada à OS pronta'},
+            @{Text='Marcar como pronto e iniciar garantia'; Error='Botão de conclusão não existe'},
+            @{Text='dataHoraRecibo101025(warranty.inicio)'; Error='Data e hora de início não aparecem na garantia'},
+            @{Text='não alteram estas datas'; Error='Comprovante não explica que retirada e pagamento não estendem a garantia'}
+          )
+          foreach($check in $clientChecks){if(-not (Select-String -Path app/public/app.js -Pattern $check.Text -SimpleMatch -Quiet)){throw $check.Error}}
+          $pkg = Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.30'){throw 'Versão incorreta'}
+          if($pkg.build.appId -ne 'com.eletromix.pdv'){throw 'appId mudou e poderia criar outro aplicativo'}
+          if(-not $pkg.build.nsis.oneClick -or $pkg.build.nsis.perMachine){throw 'Instalador silencioso por usuário não configurado'}
+      - name: Aplicar ícone do instalador
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Gerar instalador de teste
+        working-directory: app
+        run: npx electron-builder --win nsis --publish never
+      - name: Marcar validação aprovada
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.30-passed
+          git push origin -f validation-v10.10.30-passed
+      - name: Marcar validação reprovada
+        if: failure()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.10.30-failed
+          git push origin -f validation-v10.10.30-failed
