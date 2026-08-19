@@ -1,0 +1,1 @@
+Validar via da loja e garantia persistente iniciada no status Pronto.
