@@ -1,0 +1,49 @@
+name: Publicar Eletromix 10.10.32
+on:
+  push:
+    branches: [main]
+    paths: ['release-v10.10.32-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = Get-ChildItem scripts/apply-v*.py | Sort-Object { [version](($_.BaseName -replace '^apply-v','') -replace '-fix$','') }
+          foreach($file in $files){ python $file.FullName; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+          if(Test-Path scripts/fix-v10.2-types.py){python scripts/fix-v10.2-types.py;if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+          if(Test-Path scripts/fix-v10.8.4-types.py){python scripts/fix-v10.8.4-types.py;if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+      - name: Validar correções
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.32'){throw 'Versão incorreta'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'camposEditaveis101032' -SimpleMatch -Quiet)){throw 'Correção de digitação ausente'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'Digite o nome do cliente' -SimpleMatch -Quiet)){throw 'Cliente livre da OS ausente'}
+          if(-not (Select-String -Path app/public/app.js -Pattern 'onclick="cancelVenda(${v.id})"' -SimpleMatch -Quiet)){throw 'Cancelar venda ausente'}
+      - name: Aplicar ícone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar versão
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v10.10.32 --target main --title "Eletromix 10.10.32 - Correção de Digitação e Permissões" --notes "Restaura a digitação nos formulários, mantém o cliente da Ordem de Serviço como nome digitado livremente e libera Cancelar/Excluir vendas para vendedores dentro da loja autenticada." app/release/*.exe app/release/*.yml app/release/*.blockmap
