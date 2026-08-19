@@ -1,0 +1,43 @@
+name: Validar Ordem de Servico Mobile 10.10.32
+on:
+  push:
+    branches: ['agent/mobile-os-10-10-31']
+    paths:
+      - 'validation-v10.10.32-trigger.txt'
+      - 'scripts/apply-v10.10.32.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py','apply-v10.10.25.py','apply-v10.10.26.py','apply-v10.10.27.py','apply-v10.10.28.py','apply-v10.10.29.py','apply-v10.10.30.py','apply-v10.10.31.py','apply-v10.10.32.py')
+          foreach($file in $files){ python "scripts/$file"; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+      - name: Validar codigo e recursos mobile
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $checks = @(
+            @{Path='app/public/app.js'; Text='abrirOSMobile101032'; Error='Abertura da OS no mobile ausente'},
+            @{Path='app/public/app.js'; Text='osMobileLauncher101032'; Error='Atalho mobile da OS ausente'},
+            @{Path='app/public/app.js'; Text="api('/api/ordens-servico'"; Error='Criacao de OS nao usa a API compartilhada'},
+            @{Path='app/public/app.js'; Text='cancelOS101023'; Error='Cancelamento da OS ausente'},
+            @{Path='app/public/app.js'; Text='deleteOS101023'; Error='Exclusao da OS ausente'},
+            @{Path='app/public/style.css'; Text='os-mobile-ready-101032'; Error='Layout mobile da OS ausente'},
+            @{Path='app/public/style.css'; Text='#osForm101031 .form-grid'; Error='Formulario mobile em coluna unica ausente'}
+          )
+          foreach($check in $checks){if(-not (Select-String -Path $check.Path -Pattern $check.Text -SimpleMatch -Quiet)){throw $check.Error}}
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.32'){throw 'Versao incorreta'}
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
