@@ -39,6 +39,10 @@ jobs:
         working-directory: mobile-android
         run: npx cap add android
 
+      - name: Generate Eletromix icons
+        working-directory: mobile-android
+        run: npm run android:assets
+
       - name: Sync Capacitor
         working-directory: mobile-android
         run: npx cap sync android
