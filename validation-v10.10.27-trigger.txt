@@ -1,1 +1,1 @@
-Validar imagens de produtos v10.10.27 no Windows antes da publicação.
+Validar imagens de produtos v10.10.27 no Windows antes da publicação. Tentativa 2.
