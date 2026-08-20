@@ -1,0 +1,42 @@
+name: Publicar Eletromix 10.10.37 em Releases
+on:
+  push:
+    branches: [release-10.10.37]
+    paths: ['release-10.10.37-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar fonte 10.10.37
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $files = @('apply-v10.2.py','fix-v10.2-types.py','apply-v10.3.py','apply-v10.4.py','apply-v10.5.py','apply-v10.7.py','apply-v10.7.1.py','apply-v10.7.2.py','apply-v10.7.3.py','apply-v10.7.4.py','apply-v10.7.5.py','apply-v10.7.6.py','apply-v10.7.7.py','apply-v10.7.8.py','apply-v10.7.9.py','apply-v10.8.0.py','apply-v10.8.1.py','apply-v10.8.2.py','apply-v10.8.3.py','apply-v10.8.4.py','fix-v10.8.4-types.py','apply-v10.8.5.py','apply-v10.9.0.py','apply-v10.9.1.py','apply-v10.9.2.py','apply-v10.9.3.py','apply-v10.9.4.py','apply-v10.9.5.py','apply-v10.9.6.py','apply-v10.9.7.py','apply-v10.9.8.py','apply-v10.9.9.py','apply-v10.10.0.py','apply-v10.10.1.py','apply-v10.10.2.py','apply-v10.10.3.py','apply-v10.10.4.py','apply-v10.10.5.py','apply-v10.10.6.py','apply-v10.10.7.py','apply-v10.10.8.py','apply-v10.10.8-fix.py','apply-v10.10.9.py','apply-v10.10.10.py','apply-v10.10.11.py','apply-v10.10.12.py','apply-v10.10.13.py','apply-v10.10.14.py','apply-v10.10.15.py','apply-v10.10.16.py','apply-v10.10.17.py','apply-v10.10.18.py','apply-v10.10.19.py','apply-v10.10.20.py','apply-v10.10.21.py','apply-v10.10.22.py','apply-v10.10.23.py','apply-v10.10.24.py','apply-v10.10.25.py','apply-v10.10.26.py','apply-v10.10.27.py','apply-v10.10.28.py','apply-v10.10.29.py','apply-v10.10.30.py','apply-v10.10.31.py','apply-v10.10.32.py','apply-v10.10.33.py','apply-v10.10.34.py','apply-v10.10.35.py','apply-v10.10.36.py','apply-v10.10.37.py')
+          foreach($file in $files){ python "scripts/$file"; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.10.37'){throw 'Versão final incorreta'}
+      - name: Compilar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm run build
+          npx electron-builder --win nsis --publish never
+      - name: Publicar Release v10.10.37
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $exe=Get-ChildItem app/release/*.exe | Select-Object -First 1
+          $yml=Get-ChildItem app/release/*.yml | Select-Object -First 1
+          $block=Get-ChildItem app/release/*.blockmap | Select-Object -First 1
+          if(-not $exe){throw 'Instalador não gerado'}
+          if(-not $yml){throw 'latest.yml não gerado'}
+          if(-not $block){throw 'blockmap não gerado'}
+          gh release create v10.10.37 --target main --title "Eletromix 10.10.37" --notes "Versão consolidada com as correções da 10.10.36 e reparo do fluxo de atualização." app/release/*.exe app/release/*.yml app/release/*.blockmap
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          gh release edit v10.10.37 --latest
