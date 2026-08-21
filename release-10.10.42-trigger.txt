@@ -1,1 +1,1 @@
-Disparar build e publicação da v10.10.42.
+Disparar build e publicação da v10.10.42 com impressão direta da via de garantia.
