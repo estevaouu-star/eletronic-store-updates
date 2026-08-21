@@ -1,0 +1,1 @@
+Release v10.10.41 - corrigir garantia manual, impressão e exclusão de OS.
