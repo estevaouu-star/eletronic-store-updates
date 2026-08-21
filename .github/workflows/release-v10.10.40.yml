@@ -21,6 +21,10 @@ jobs:
           $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
           if($pkg.version -ne '10.10.40'){throw 'Versão final incorreta'}
           if(-not (Select-String -Path app/public/app.js -Pattern 'removida definitivamente do histórico' -SimpleMatch -Quiet)){throw 'Exclusão de OS finalizada não aplicada'}
+          New-Item -ItemType Directory -Force -Path app/build | Out-Null
+          $iconB64=(Get-Content assets/eletromix-icon-256.b64 -Raw).Trim()
+          [IO.File]::WriteAllBytes((Join-Path $PWD 'app/build/eletromix-icon-256.png'),[Convert]::FromBase64String($iconB64))
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('app/package.json','utf8'));p.build=p.build||{};p.build.win=p.build.win||{};p.build.win.icon='build/eletromix-icon-256.png';fs.writeFileSync('app/package.json',JSON.stringify(p,null,2));"
       - name: Compilar instalador
         working-directory: app
         env:
