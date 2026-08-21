@@ -12,7 +12,6 @@ html=read('public/index.html');html=replace1(html,'id="versionInfo" class="versi
 js=read('public/app.js');js=replace1(js,'const atual="10.10.41"','const atual="10.10.42"','atualizador')
 server=read('src/server.ts')
 
-# Endpoint dedicado de exclusão para eliminar qualquer conflito com handlers legados.
 anchor='''app.delete("/api/ordens-servico/:id",auth,(req,res)=>{\n  const index=db.ordensServico.findIndex(x=>x.lojaId===lojaIdReq(req)&&x.id===Number(req.params.id));\n  if(index<0)return res.status(404).json({erro:"Ordem de serviço não encontrada."});\n  const [removida]=db.ordensServico.splice(index,1);salvar();res.json({ok:true,id:removida.id});\n});'''
 if anchor not in server: raise RuntimeError('Endpoint DELETE de OS nao encontrado')
 extra=anchor+'''\n\napp.delete("/api/ordens-servico/:id/excluir",auth,(req,res)=>{\n  const id=Number(req.params.id),lojaId=lojaIdReq(req);\n  const index=db.ordensServico.findIndex(x=>x.lojaId===lojaId&&x.id===id);\n  if(index<0)return res.status(404).json({erro:"Ordem de serviço não encontrada."});\n  const [removida]=db.ordensServico.splice(index,1);\n  salvar();\n  return res.json({ok:true,id:removida.id});\n});'''
@@ -20,7 +19,7 @@ server=server.replace(anchor,extra,1)
 
 js += r'''
 
-// 10.10.42 - garantia fora do Abrir/Atualizar + exclusão independente e confiável.
+// 10.10.42 - garantia fora do Abrir/Atualizar + exclusão independente e impressão direta.
 async function excluirOS101042(id){
  const o=(ordensServico||[]).find(x=>Number(x.id)===Number(id));
  if(!o)return toast('Ordem de serviço não encontrada.');
@@ -38,25 +37,47 @@ async function excluirOS101042(id){
  }catch(e){console.error('[excluir OS 101042]',e);toast(e?.message||'Erro ao excluir a ordem de serviço.')}
 }
 
+async function imprimirGarantia101042(o,button){
+ if(!o)return toast('Ordem não encontrada.');
+ if(!osGarantiaAtiva101041(o))return toast('Acione a garantia antes de imprimir.');
+ const html=osViaHtml101036(o,'garantia');
+ if(!html)return toast('Não foi possível montar a via de garantia.');
+ const original=button?.textContent||'Imprimir garantia';
+ if(button){button.disabled=true;button.textContent='Imprimindo...'}
+ try{
+   if(window.desktopPrinter){
+     loadPrinterSettings();
+     const result=await window.desktopPrinter.print({html,deviceName:printerSettings.deviceName,paperWidth:printerSettings.paperWidth,itemCount:1});
+     if(!result?.success)throw new Error(result?.failureReason||'A impressora não respondeu.');
+     if(result.deviceName){printerSettings.deviceName=result.deviceName;savePrinterSettings()}
+     toast('Via de garantia enviada para a impressora.');
+     return;
+   }
+   if(typeof imprimirHtmlOS101038==='function'){
+     imprimirHtmlOS101038(`Garantia OS #${o.id}`,html);
+     return;
+   }
+   visualizarVia101036(o,'garantia');
+ }catch(e){console.error('[garantia 101042]',e);toast(`Falha ao imprimir garantia: ${String(e?.message||e)}`)}
+ finally{if(button){button.disabled=false;button.textContent=original}}
+}
+
 const renderOSBase101042=renderOS;
 renderOS=function(){
  renderOSBase101042();
  document.querySelectorAll('.os-card-101023[data-os-id]').forEach(card=>{
    const o=(ordensServico||[]).find(x=>Number(x.id)===Number(card.dataset.osId));if(!o)return;
    const footer=card.querySelector('footer');if(!footer)return;
-   // Remove botões antigos de garantia/exclusão duplicados criados por patches anteriores.
    card.querySelectorAll('.os-card-warranty-101042,.os-card-delete-101042').forEach(x=>x.remove());
    const actions=card.querySelector('.os-print-actions-101020')||footer;
    if(osGarantiaAtiva101041(o)){
      const warranty=document.createElement('button');warranty.type='button';warranty.className='primary os-card-warranty-101042';warranty.dataset.warrantyOs101042=String(o.id);warranty.textContent='Imprimir garantia';actions.appendChild(warranty);
    }
    const del=document.createElement('button');del.type='button';del.className='danger os-card-delete-101042';del.dataset.deleteOs101042=String(o.id);del.textContent='Excluir OS';footer.appendChild(del);
-   // Esconde o botão visual antigo para não haver duas exclusões concorrendo.
    card.querySelectorAll('.os-delete-101039').forEach(b=>b.style.display='none');
  });
 };
 
-// No modal: garantia ativa vira apenas informação; impressão fica no cartão.
 const editOSBase101042=editOS;
 editOS=function(id){
  editOSBase101042(id);
@@ -73,10 +94,10 @@ editOS=function(id){
 
 document.addEventListener('click',e=>{
  const warranty=e.target?.closest?.('[data-warranty-os-101042]');
- if(warranty){e.preventDefault();e.stopImmediatePropagation();const o=(ordensServico||[]).find(x=>Number(x.id)===Number(warranty.dataset.warrantyOs101042));if(o)imprimirGarantia101041(o);return}
+ if(warranty){e.preventDefault();e.stopImmediatePropagation();const o=(ordensServico||[]).find(x=>Number(x.id)===Number(warranty.dataset.warrantyOs101042));if(o)imprimirGarantia101042(o,warranty);return}
  const del=e.target?.closest?.('[data-delete-os-101042]');
  if(del){e.preventDefault();e.stopImmediatePropagation();excluirOS101042(Number(del.dataset.deleteOs101042));return}
 },true);
 '''
 write('public/app.js',js);write('src/server.ts',server)
-print('10.10.42: imprimir garantia no cartão e exclusão de OS por endpoint dedicado.')
+print('10.10.42: imprimir garantia no cartão com impressão direta e exclusão de OS por endpoint dedicado.')
