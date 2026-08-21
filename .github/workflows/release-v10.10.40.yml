@@ -2,7 +2,6 @@ name: Publicar Eletromix 10.10.40 em Releases
 on:
   push:
     branches: [main]
-    paths: ['release-10.10.40-main-trigger.txt']
   workflow_dispatch:
 permissions:
   contents: write
