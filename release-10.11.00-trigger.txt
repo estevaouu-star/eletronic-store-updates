@@ -1,1 +1,1 @@
-Publicar v10.11.00 com vias cliente/loja compactadas e prioridades em Modelo, Serviço, ciência/autorização e assinatura.
+Tentar novamente a publicação da v10.11.00 após corrigir o workflow para usar a sequência validada de patches.
