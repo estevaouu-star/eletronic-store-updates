@@ -1,0 +1,1 @@
+Publicar 10.10.51: corrigir somente o corte inferior das vias cliente/loja, mantendo a garantia intacta.
