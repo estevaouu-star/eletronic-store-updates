@@ -1,0 +1,52 @@
+name: Publicar Eletromix 10.11.00 em Releases
+on:
+  push:
+    branches: [main]
+    paths: ['release-10.11.00-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair fonte
+        shell: pwsh
+        run: Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+      - name: Aplicar patches
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem scripts/apply-v*.py | Where-Object { $_.Name -match '^apply-v(\d+)\.(\d+)(?:\.(\d+))?(?:-fix)?\.py$' } | Sort-Object @{Expression={[int]$_.BaseName.Split('-')[1].Substring(1).Split('.')[0]}},@{Expression={[int]$_.BaseName.Split('-')[1].Substring(1).Split('.')[1]}},@{Expression={ $p=$_.BaseName.Split('-')[1].Substring(1).Split('.'); if($p.Count -gt 2){[int]$p[2]}else{0}}},Name
+          foreach($f in $files){ if($f.Name -eq 'apply-v10.11.00.py'){continue}; python $f.FullName; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+          python scripts/apply-v10.11.00.py
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Validar
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.11.0'){throw 'Versão incorreta'}
+          if(-not (Select-String app/public/app.js -Pattern 'receipt-priority-101052' -SimpleMatch -Quiet)){throw 'Layout prioritário ausente'}
+      - name: Aplicar ícone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+      - name: Publicar
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v10.11.00 --yes 2>$null
+          gh release create v10.11.00 --target main --title "Eletromix 10.11.00 - Vias otimizadas" --notes "Via da Loja e Via do Cliente compactadas para evitar corte, priorizando Modelo, Serviço, ciência/autorização e assinatura. Via de Garantia preservada." app/release/*.exe app/release/*.yml app/release/*.blockmap
+          gh release edit v10.11.00 --latest
