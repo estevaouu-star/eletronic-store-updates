@@ -1,0 +1,1 @@
+Publicar 10.10.49: cliente e loja usando o mesmo pipeline visual da garantia.
