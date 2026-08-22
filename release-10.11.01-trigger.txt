@@ -1,1 +1,1 @@
-Publicar v10.11.01 liberando todas as funções para usuários logados e mantendo gestão de login apenas para ADM.
+Redisparar v10.11.01: todos os usuários logados podem usar as funções do sistema; somente gestão de login/usuários permanece exclusiva de ADM.
