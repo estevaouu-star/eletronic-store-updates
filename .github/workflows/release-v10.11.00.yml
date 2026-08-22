@@ -14,13 +14,18 @@ jobs:
       - name: Extrair fonte
         shell: pwsh
         run: Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
-      - name: Aplicar patches
+      - name: Aplicar patches em ordem validada
         shell: pwsh
         run: |
-          $files = Get-ChildItem scripts/apply-v*.py | Where-Object { $_.Name -match '^apply-v(\d+)\.(\d+)(?:\.(\d+))?(?:-fix)?\.py$' } | Sort-Object @{Expression={[int]$_.BaseName.Split('-')[1].Substring(1).Split('.')[0]}},@{Expression={[int]$_.BaseName.Split('-')[1].Substring(1).Split('.')[1]}},@{Expression={ $p=$_.BaseName.Split('-')[1].Substring(1).Split('.'); if($p.Count -gt 2){[int]$p[2]}else{0}}},Name
-          foreach($f in $files){ if($f.Name -eq 'apply-v10.11.00.py'){continue}; python $f.FullName; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE} }
+          $wf = Get-Content '.github/workflows/release-v10.10.51.yml' -Raw
+          $m = [regex]::Match($wf, '\$base\s*=\s*@\((.*?)\)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+          if(-not $m.Success){ throw 'Lista validada da 10.10.51 não encontrada' }
+          $files = [regex]::Matches($m.Groups[1].Value, "'([^']+)'\s*,?") | ForEach-Object { $_.Groups[1].Value }
+          foreach($file in $files){ python "scripts/$file"; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }
+          python scripts/apply-v10.10.52.py
+          if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
           python scripts/apply-v10.11.00.py
-          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }
       - name: Validar
         shell: pwsh
         run: |
