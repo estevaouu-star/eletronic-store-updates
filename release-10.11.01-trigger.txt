@@ -1,0 +1,1 @@
+Publicar v10.11.01 liberando todas as funções para usuários logados e mantendo gestão de login apenas para ADM.
