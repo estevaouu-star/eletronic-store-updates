@@ -1,0 +1,1 @@
+Validar Eletromix 10.11.02: migração para D1 e sincronização otimizada.
