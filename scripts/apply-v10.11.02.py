@@ -89,7 +89,7 @@ async function cloudPull(apply=true){
 async function cloudPush(){
   const c=cloudCfg();if(!c?.enabled||cloudBusy)return;cloudBusy=true;cloudState="syncing";cloudMessage="Enviando alterações...";
   try{
-    if(!cloudVersion){const meta=await cloudRemoteVersion101102();cloudVersion=meta.version;cloudUpdatedAt=meta.updated_at;}
+    if(!cloudVersion){try{const meta=await cloudRemoteVersion101102();cloudVersion=meta.version;cloudUpdatedAt=meta.updated_at;}catch{cloudVersion=0}}
     const rows=await cloudRpc("electronic_store_push",{p_sync_id:c.syncId,p_secret:c.secret,p_payload:db,p_expected_version:cloudVersion});
     const row=Array.isArray(rows)?rows[0]:rows;
     if(!row?.ok){await cloudPull(true);cloudState="online";cloudMessage="Havia uma alteração mais nova; revise e salve novamente";return;}
@@ -100,7 +100,8 @@ function agendarCloudPush(){if(cloudPushTimer)clearTimeout(cloudPushTimer);cloud
 const salvar = () => {fs.writeFileSync(dataFile, JSON.stringify(db, null, 2));cloudDirty=true;agendarCloudPush()};
 async function iniciarCloud(){
   const c=cloudCfg();if(!c?.enabled)return;
-  await cloudPull(true);
+  const ok=await cloudPull(true);
+  if(!ok&&fs.existsSync(dataFile))await cloudPush();
 }
 '''
 server = server[:start] + cloud + server[end:]
