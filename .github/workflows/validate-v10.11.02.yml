@@ -1,0 +1,65 @@
+name: Validar Banco Otimizado 10.11.02
+on:
+  push:
+    branches: ['agent/eletromix-db-migration']
+    paths: ['validation-v10.11.02-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $wf = Get-Content '.github/workflows/release-v10.10.51.yml' -Raw
+          $m = [regex]::Match($wf, '\$base\s*=\s*@\((.*?)\)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+          if(-not $m.Success){ throw 'Lista validada da 10.10.51 não encontrada' }
+          $files = [regex]::Matches($m.Groups[1].Value, "'([^']+)'\s*,?") | ForEach-Object { $_.Groups[1].Value }
+          foreach($file in $files){ python "scripts/$file"; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }
+          foreach($file in @('apply-v10.10.52.py','apply-v10.11.00.py','apply-v10.11.01.py','apply-v10.11.02.py')){ python "scripts/$file"; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Validar sincronização otimizada
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node --check app/electron/main.cjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $server=Get-Content app/src/server.ts -Raw
+          if(-not $server.Contains('electronic_store_version')){throw 'Consulta leve ausente'}
+          if(-not $server.Contains('eletromix-mobile.estevaouu.chatgpt.site')){throw 'Novo servidor ausente'}
+          if($server.Contains('setInterval(async()=>{if(!cloudBusy)await cloudPull(true)')){throw 'Sincronização periódica ativa'}
+          if(-not $server.Contains('if(cloudDirty)await cloudPush();else await cloudPull(true)')){throw 'Botão manual incorreto'}
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.11.2'){throw 'Versão incorreta'}
+          if($pkg.build.appId -ne 'com.eletromix.pdv'){throw 'appId alterado'}
+      - name: Aplicar ícone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Gerar instalador de teste
+        working-directory: app
+        run: npx electron-builder --win nsis --publish never
+      - name: Marcar validação aprovada
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.11.02-passed
+          git push origin -f validation-v10.11.02-passed
+      - name: Marcar validação reprovada
+        if: failure()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.11.02-failed
+          git push origin -f validation-v10.11.02-failed
