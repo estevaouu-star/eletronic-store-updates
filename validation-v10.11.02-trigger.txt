@@ -1,1 +1,1 @@
-Validar Eletromix 10.11.02: migração para D1 e sincronização otimizada.
+Validar novamente Eletromix 10.11.02: iniciar D1 com a cópia local e manter sincronização otimizada.
