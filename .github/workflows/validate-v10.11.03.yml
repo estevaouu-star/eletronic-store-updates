@@ -1,0 +1,57 @@
+name: Validar Sincronização GZIP 10.11.03
+on:
+  push:
+    branches: ['agent/eletromix-gzip']
+    paths: ['validation-v10.11.03-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $wf = Get-Content '.github/workflows/release-v10.10.51.yml' -Raw
+          $m = [regex]::Match($wf, '\$base\s*=\s*@\((.*?)\)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+          if(-not $m.Success){throw 'Lista validada da 10.10.51 não encontrada'}
+          $files = [regex]::Matches($m.Groups[1].Value, "'([^']+)'\s*,?") | ForEach-Object {$_.Groups[1].Value}
+          foreach($file in $files){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+          foreach($file in @('apply-v10.10.52.py','apply-v10.11.00.py','apply-v10.11.01.py','apply-v10.11.02.py','apply-v10.11.03.py')){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+      - name: Instalar e compilar
+        working-directory: app
+        run: |
+          npm install
+          npm run build
+      - name: Validar compactação
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          node --check app/electron/main.cjs
+          $server=Get-Content app/src/server.ts -Raw
+          foreach($required in @('gzipSync','gunzipSync','p_payload_gzip','p_accept_gzip:true','setTimeout(()=>cloudPush(),1200)')){if(-not $server.Contains($required)){throw "Recurso GZIP ausente: $required"}}
+          if($server.Contains('p_payload:db')){throw 'Upload JSON comum ainda ativo'}
+          if($server.Contains('setInterval(async()=>{if(!cloudBusy)await cloudPull(true)')){throw 'Sincronização periódica ativa'}
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.11.3'){throw 'Versão incorreta'}
+      - name: Testar taxa de compactação
+        shell: pwsh
+        run: |
+          node -e "const z=require('zlib');const x=JSON.stringify({produtos:Array.from({length:1920},(_,i)=>({id:i,nome:'Produto '+i,categoria:'Diversos',estoque:i%50,preco:19.9}))});const g=z.gzipSync(Buffer.from(x),{level:9});console.log(x.length,g.length);if(g.length>=x.length*0.35)process.exit(1)"
+      - name: Aplicar ícone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Gerar instalador de teste
+        working-directory: app
+        run: npx electron-builder --win nsis --publish never
+      - name: Marcar validação
+        if: success()
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -f validation-v10.11.03-passed
+          git push origin -f validation-v10.11.03-passed
