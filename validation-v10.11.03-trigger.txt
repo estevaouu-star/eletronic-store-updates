@@ -1,0 +1,1 @@
+Validar Eletromix 10.11.03 com GZIP de ponta a ponta.
