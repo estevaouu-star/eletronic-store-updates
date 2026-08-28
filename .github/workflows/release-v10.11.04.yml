@@ -2,7 +2,9 @@ name: Publicar Eletromix 10.11.04 em Releases
 on:
   push:
     branches: [main]
-    paths: ['release-10.11.04-trigger.txt']
+    paths:
+      - 'release-10.11.04-trigger.txt'
+      - '.github/workflows/release-v10.11.04.yml'
   workflow_dispatch:
 permissions:
   contents: write
