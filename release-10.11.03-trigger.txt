@@ -1,2 +1,2 @@
-Publicar Eletromix 10.11.03 com sincronização compactada.
-Validação concluída em 25/08/2026.
+Publicar Eletromix 10.11.03 com correção de login em computador novo e sincronização compactada.
+Disparo atualizado em 28/08/2026.
