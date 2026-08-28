@@ -1,1 +1,2 @@
-Publicar Eletromix 10.11.05 - correcao de impressao ELGIN i8 via driver Windows.
+Publicar Eletromix 10.11.05 - ELGIN i8 via driver Windows com fallback nativo.
+Disparo: 2026-08-28.
