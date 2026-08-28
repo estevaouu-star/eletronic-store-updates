@@ -1,2 +1,2 @@
 Publicar Eletromix 10.11.06 - ELGIN i8 com comunicacao direta Virtual COM/USB serial.
-Disparo: 2026-08-28.
+Disparo atualizado: 2026-08-28.
