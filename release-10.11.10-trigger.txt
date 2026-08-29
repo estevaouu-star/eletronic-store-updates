@@ -1,0 +1,2 @@
+Publicar Eletromix 10.11.10 - logout definitivo sem relogin automatico.
+Disparo: 2026-08-29.
