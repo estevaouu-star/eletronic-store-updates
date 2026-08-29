@@ -1,0 +1,2 @@
+Publicar Eletromix 10.11.12 - correção definitiva do relogin automático após Sair.
+Disparo: 2026-08-29.
