@@ -1,0 +1,55 @@
+name: Publicar Eletromix 10.11.11 em Releases
+on:
+  push:
+    branches: [main]
+    paths: ['release-10.11.11-trigger.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $wf = Get-Content '.github/workflows/release-v10.10.51.yml' -Raw
+          $m = [regex]::Match($wf, '\$base\s*=\s*@\((.*?)\)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+          if(-not $m.Success){ throw 'Lista base nao encontrada' }
+          $files = [regex]::Matches($m.Groups[1].Value, "'([^']+)'\s*,?") | ForEach-Object {$_.Groups[1].Value}
+          foreach($file in $files){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+          foreach($file in @('apply-v10.10.52.py','apply-v10.11.00.py','apply-v10.11.01.py','apply-v10.11.02.py','apply-v10.11.03.py','apply-v10.11.04.py','apply-v10.11.05.py','apply-v10.11.06.py','apply-v10.11.07.py','apply-v10.11.08.py','apply-v10.11.09.py','apply-v10.11.10.py','apply-v10.11.11.py')){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+      - name: Aplicar icone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Validar ELGIN e bloqueio do Notas
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node --check app/electron/main.cjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
+          if($pkg.version -ne '10.11.11'){throw 'Versão incorreta'}
+          if(-not (Select-String app/electron/main.cjs -Pattern 'isVirtualPrinter101111' -SimpleMatch -Quiet)){throw 'Bloqueio de impressoras virtuais ausente'}
+          if(Select-String app/electron/main.cjs -Pattern '!elginI8 && !/pdf' -SimpleMatch -Quiet){throw 'ELGIN i8 ainda excluida do RAW'}
+          if(-not (Select-String app/electron/main.cjs -Pattern 'notas|bloco de notas|notepad' -SimpleMatch -Quiet)){throw 'Bloqueio do Notas ausente'}
+          if(-not (Select-String app/public/index.html -Pattern 'nfce-settings-block' -SimpleMatch -Quiet)){throw 'Área fiscal foi removida indevidamente'}
+      - name: Compilar e gerar instalador
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm run build
+          npx electron-builder --win nsis --publish never
+      - name: Publicar
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v10.11.11 --yes 2>$null
+          gh release create v10.11.11 --target main --title "Eletromix 10.11.11 - ELGIN i8 direta" --notes "Corrige a seleção errada do aplicativo Notas/OneNote como destino de impressão. A ELGIN i8 passa a receber ESC/POS RAW, enquanto Notas, Bloco de Notas, OneNote, PDF, XPS, Fax e outras impressoras virtuais ficam bloqueados. A área fiscal permanece no sistema. Esta versão também preserva as mudanças da 10.11.10." app/release/*.exe app/release/*.yml app/release/*.blockmap
+          gh release edit v10.11.11 --latest
