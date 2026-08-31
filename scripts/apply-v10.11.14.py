@@ -25,40 +25,31 @@ js = js.replace(
 write("public/app.js", js)
 
 main = read("electron/main.cjs")
-raw_first = r'''    // MODO PRINCIPAL: rasteriza somente o comprovante e envia bytes ESC/POS diretamente à fila RAW.
-    // Isso ignora por completo o tamanho de página/formulário do driver do Windows, que era a origem
-    // do avanço enorme de papel em algumas impressoras térmicas.
-    if(process.platform==="win32" && !isVirtualPrinter101113({name:deviceName})){
-      try{
-        const rect=await printWindow.webContents.executeJavaScript(`(()=>{
-          const el=document.querySelector('.receipt');if(!el)return null;
-          const st=document.createElement('style');st.textContent='html,body{margin:0!important;padding:0!important;min-height:0!important;height:auto!important;overflow:hidden!important}.receipt{position:relative!important;top:0!important;margin:0!important;transform:none!important}';document.head.appendChild(st);
-          const r=el.getBoundingClientRect();return {x:Math.max(0,Math.floor(r.x)),y:Math.max(0,Math.floor(r.y)),width:Math.max(1,Math.ceil(r.width)),height:Math.max(1,Math.ceil(r.height))};
-        })()`);
-        if(!rect)throw new Error("Área do comprovante não encontrada.");
-        const image=await printWindow.webContents.capturePage(rect);
-        const raw=receiptImageToEscPos(image,width);
-        await sendRawPrinterWindows(deviceName,raw);
-        return {success:true,failureReason:"",deviceName,paperWidth:width,mode:"escpos"};
-      }catch(err){
-        rawFailure=String(err?.message||err);
-        console.error("[printer] Modo térmico direto falhou; usando fallback do Windows:",rawFailure);
-      }
-    }
-
-    // Fallback para impressoras que não aceitam ESC/POS RAW.
-'''
-driver_first = r'''    // 10.11.14: o driver instalado no próprio computador volta a ser o caminho principal.
-    // O modo RAW pode aceitar o trabalho sem que a ELGIN i8 mova o papel; por isso ele fica só como reserva.
-'''
-if raw_first not in main: raise SystemExit("bloco RAW principal não encontrado")
-main = main.replace(raw_first, driver_first, 1)
-
-old_driver = r'''    const result=await new Promise(resolve=>{
-      printWindow.webContents.print({silent:true,printBackground:true,deviceName,margins:{marginType:"none"},pageSize:{width:Math.round(width*1000),height:Math.round(heightMm*1000)}},(success,failureReason)=>resolve({success,failureReason:failureReason||"",deviceName,paperWidth:width,paperLength:heightMm,mode:"windows",rawFailure}));
-    });
-    return result;'''
-new_driver = r'''    const elginI8=/elgin.*i8|i8.*elgin/i.test(available.find(p=>p.name===deviceName)?.displayName||deviceName);
+new_handler = r'''ipcMain.handle("printer:print", async (_event, payload = {}) => {
+  const width = Number(payload.paperWidth) === 58 ? 58 : 80;
+  let deviceName = String(payload.deviceName || "").trim();
+  let available = [];
+  try { available = mainWindow ? (await mainWindow.webContents.getPrintersAsync()).filter(p=>!isVirtualPrinter101113(p)) : []; } catch {}
+  if(deviceName && (!available.some(p=>p.name===deviceName)||isVirtualPrinter101113({name:deviceName})))deviceName="";
+  if(!deviceName){
+    const preferred=available.find(p=>/elgin.*i8|i8.*elgin/i.test(`${p.name} ${p.displayName||""} ${p.description||""}`))||available.find(p=>/epson|bematech|elgin|daruma|control.?id|thermal|t[eé]rmica|receipt|pos|tm-|mp-|80|58/i.test(`${p.name} ${p.displayName||""} ${p.description||""}`))||available.find(p=>p.isDefault)||available[0];
+    if(preferred)deviceName=preferred.name;
+  }
+  if(!deviceName)return {success:false,failureReason:"Nenhuma impressora física instalada foi encontrada neste computador."};
+  if(thermalPrintBusy)return {success:false,failureReason:"Uma impressão já está em andamento.",deviceName,busy:true};
+  thermalPrintBusy=true;
+  const printWindow=getThermalRenderWindow();
+  let rawFailure="";
+  try{
+    const html=receiptPrintHtml(String(payload.html||""),width);
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    await printWindow.webContents.executeJavaScript(`Promise.all(Array.from(document.images||[]).map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=r;img.onerror=r}))).then(()=>true)`);
+    await new Promise(resolve=>setTimeout(resolve,50));
+    const receiptPx=await printWindow.webContents.executeJavaScript(`(()=>{const el=document.querySelector('.receipt');if(!el)return 0;return Math.max(el.getBoundingClientRect().height,el.scrollHeight||0)})()`);
+    const measuredMm=Number(receiptPx||0)*25.4/96;
+    const heightMm=Math.min(1000,Math.max(28,Math.ceil(measuredMm+3)));
+    const selected=available.find(p=>p.name===deviceName);
+    const elginI8=/elgin.*i8|i8.*elgin/i.test(`${selected?.name||deviceName} ${selected?.displayName||""} ${selected?.description||""}`);
     const printOptions=elginI8
       ? {silent:true,printBackground:true,deviceName,margins:{marginType:"none"}}
       : {silent:true,printBackground:true,deviceName,margins:{marginType:"none"},pageSize:{width:Math.round(width*1000),height:Math.round(heightMm*1000)}};
@@ -81,8 +72,15 @@ new_driver = r'''    const elginI8=/elgin.*i8|i8.*elgin/i.test(available.find(p=
         return {success:true,failureReason:"",deviceName,paperWidth:width,mode:"escpos-fallback",driverFailure:result.failureReason};
       }catch(err){rawFailure=String(err?.message||err)}
     }
-    return {...result,rawFailure};'''
-if old_driver not in main: raise SystemExit("bloco do driver não encontrado")
-main = main.replace(old_driver, new_driver, 1)
+    return {...result,rawFailure};
+  }catch(err){
+    console.error("[printer] Erro ao imprimir:",err);
+    return {success:false,failureReason:String(err?.message||err),deviceName,rawFailure};
+  }finally{thermalPrintBusy=false}
+});'''
+
+pattern=r'ipcMain\.handle\("printer:print", async \(_event, payload = \{\}\) => \{.*?\n\}\);(?=\n\napp\.whenReady\(\))'
+main,count=re.subn(pattern,lambda _m:new_handler,main,count=1,flags=re.S)
+if count!=1: raise SystemExit("handler de impressão não encontrado")
 write("electron/main.cjs", main)
 print("10.11.14: driver local da ELGIN i8 como principal; RAW somente após falha real do driver.")
