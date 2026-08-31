@@ -1,1 +1,2 @@
 Publicar Eletromix 10.11.14 com o driver local da ELGIN i8 restaurado.
+Tentativa 2: patch robusto do manipulador de impressão.
