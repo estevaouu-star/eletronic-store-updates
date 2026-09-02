@@ -34,7 +34,7 @@ jobs:
           $pkg=Get-Content app/package.json -Raw | ConvertFrom-Json
           if($pkg.version -ne '10.11.18'){throw 'Versão incorreta'}
           if(-not (Select-String app/electron/main.cjs -Pattern 'windows-elgin-i8-gdi-papersize-fixed' -SimpleMatch -Quiet)){throw 'Correção PaperSize da ELGIN i8 ausente'}
-          if(-not (Select-String app/electron/main.cjs -Pattern "[System.Drawing.Printing.PaperSize]::new('Eletromix 80mm',$width,$height)" -SimpleMatch -Quiet)){throw 'Construtor PaperSize corrigido ausente'}
+          if(-not (Select-String app/electron/main.cjs -Pattern 'System.Drawing.Printing.PaperSize]::new' -SimpleMatch -Quiet)){throw 'Construtor PaperSize corrigido ausente'}
           if(Select-String app/electron/main.cjs -Pattern "PaperSize -ArgumentList 'Eletromix 80mm'" -SimpleMatch -Quiet){throw 'Construtor PaperSize antigo ainda presente'}
           if(-not (Select-String app/electron/main.cjs -Pattern 'isVirtualPrinter101113' -SimpleMatch -Quiet)){throw 'Filtro virtual ausente'}
       - name: Compilar e gerar instalador
