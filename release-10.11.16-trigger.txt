@@ -1,0 +1,1 @@
+Publicar impressão nativa GDI da ELGIN i8.
