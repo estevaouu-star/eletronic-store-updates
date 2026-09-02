@@ -1,2 +1,3 @@
 Eletromix 10.11.18 — corrige conversão Int32 do tamanho do papel ELGIN i8.
 Nova montagem com patch 10.11.17 aplicado antes da correção.
+Validação literal corrigida.
