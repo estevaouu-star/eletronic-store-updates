@@ -1,1 +1,2 @@
 Publicar impressão nativa GDI da ELGIN i8.
+Tentativa 2 com cadeia completa de atualizações.
