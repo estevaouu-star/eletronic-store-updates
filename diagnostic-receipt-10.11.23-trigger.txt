@@ -1,1 +1,2 @@
 Extrair modelo real do comprovante e fluxo de impressão.
+Segunda execução com extração corrigida.
