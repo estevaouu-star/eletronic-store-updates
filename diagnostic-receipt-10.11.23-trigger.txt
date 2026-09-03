@@ -1,2 +1,3 @@
 Extrair modelo real do comprovante e fluxo de impressão.
 Segunda execução com extração corrigida.
+Localizar corpo e duplicação em 2026-09-03.
