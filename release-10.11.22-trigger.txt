@@ -1,0 +1,1 @@
+Eletromix 10.11.22 — mantém impressão da 10.11.20 e aplica alinhamento via CSS seguro.
