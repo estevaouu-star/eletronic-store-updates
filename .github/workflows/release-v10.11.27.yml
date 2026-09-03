@@ -1,0 +1,56 @@
+name: Validar e publicar Eletromix 10.11.27
+on:
+  push:
+    branches: [main]
+    paths: ['release-10.11.27-trigger.txt']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar versão completa
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $wf=Get-Content '.github/workflows/release-v10.10.51.yml' -Raw
+          $m=[regex]::Match($wf,'\$base\s*=\s*@\((.*?)\)',[System.Text.RegularExpressions.RegexOptions]::Singleline)
+          $files=[regex]::Matches($m.Groups[1].Value,"'([^']+)'\s*,?")|ForEach-Object {$_.Groups[1].Value}
+          foreach($file in $files){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+          foreach($file in @('apply-v10.10.52.py','apply-v10.11.00.py','apply-v10.11.01.py','apply-v10.11.02.py','apply-v10.11.03.py','apply-v10.11.04.py','apply-v10.11.05.py','apply-v10.11.06.py','apply-v10.11.07.py','apply-v10.11.08.py','apply-v10.11.09.py','apply-v10.11.10.py','apply-v10.11.11.py','apply-v10.11.12.py','apply-v10.11.13.py','apply-v10.11.14.py','apply-v10.11.15.py','apply-v10.11.16.py','apply-v10.11.17.py','apply-v10.11.18.py','apply-v10.11.19.py','apply-v10.11.20.py','apply-v10.11.21.py','apply-v10.11.22.py','apply-v10.11.23.py','apply-v10.11.24.py','apply-v10.11.25.py','apply-v10.11.26.py','apply-v10.11.27.py')){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+      - name: Aplicar icone
+        shell: pwsh
+        run: python -c "import base64,pathlib; data=base64.b64decode(''.join(pathlib.Path(f'assets/eletromix-icon-256.part{i}').read_text().strip() for i in range(1,7))); pathlib.Path('app/electron/assets/icon.png').write_bytes(data); pathlib.Path('app/public/eletromix-app-icon.png').write_bytes(data)"
+      - name: Testar todos os estados da tela
+        shell: pwsh
+        run: |
+          node --check app/public/app.js
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node --check app/electron/main.cjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $js=Get-Content app/public/app.js -Raw
+          $main=Get-Content app/electron/main.cjs -Raw
+          if(-not $js.Contains('A consulta do Windows demorou demais.')){throw 'Timeout visual ausente'}
+          if(-not $js.Contains('ELGIN i8 (copy 1)')){throw 'Recuperação visual ausente'}
+          if(-not $js.Contains('configuração recuperada')){throw 'Estado de recuperação ausente'}
+          if(-not $main.Contains('if(deviceName && available.length')){throw 'Destino ainda pode ser descartado'}
+          if(-not $main.Contains('else if(process.platform==="win32")deviceName="ELGIN i8 (copy 1)"')){throw 'Destino Win32 ausente'}
+          if(-not $main.Contains('windows-elgin-i8-driver-native-restored')){throw 'Motor funcional ausente'}
+          if(-not $main.Contains('const inner = width === 58 ? 44 : 60')){throw 'Layout ausente'}
+      - name: Compilar
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm run build
+          npx electron-builder --win nsis --publish never
+      - name: Publicar somente após validação
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v10.11.27 --yes 2>$null
+          gh release create v10.11.27 --target main --title "Eletromix 10.11.27 - ELGIN recuperada sem carregamento infinito" --notes "A tela sempre encerra o carregamento; recupera ELGIN i8 (copy 1) em erro ou lista vazia; o envio não descarta mais a impressora conhecida." app/release/*.exe app/release/*.yml app/release/*.blockmap
+          gh release edit v10.11.27 --latest
