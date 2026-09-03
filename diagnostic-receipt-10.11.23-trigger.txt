@@ -2,3 +2,4 @@ Extrair modelo real do comprovante e fluxo de impressão.
 Segunda execução com extração corrigida.
 Localizar corpo e duplicação em 2026-09-03.
 Diagnosticar listagem após 10.11.24.
+Extração exata da listagem.
