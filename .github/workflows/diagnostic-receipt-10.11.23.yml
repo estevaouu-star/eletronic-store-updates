@@ -21,17 +21,22 @@ jobs:
           $files = [regex]::Matches($m.Groups[1].Value, "'([^']+)'\s*,?") | ForEach-Object {$_.Groups[1].Value}
           foreach($file in $files){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
           foreach($file in @('apply-v10.10.52.py','apply-v10.11.00.py','apply-v10.11.01.py','apply-v10.11.02.py','apply-v10.11.03.py','apply-v10.11.04.py','apply-v10.11.05.py','apply-v10.11.06.py','apply-v10.11.07.py','apply-v10.11.08.py','apply-v10.11.09.py','apply-v10.11.10.py','apply-v10.11.11.py','apply-v10.11.12.py','apply-v10.11.13.py','apply-v10.11.14.py','apply-v10.11.15.py','apply-v10.11.16.py','apply-v10.11.17.py','apply-v10.11.18.py','apply-v10.11.19.py','apply-v10.11.20.py','apply-v10.11.21.py','apply-v10.11.22.py','apply-v10.11.23.py')){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
-      - name: Mostrar gerador e fluxo exatos
+      - name: Mostrar gerador do corpo do comprovante
         shell: pwsh
         run: |
           $code = @'
           from pathlib import Path
-          s=Path("app/electron/main.cjs").read_text(encoding="utf-8")
-          a=s.index("function receiptPrintHtml")
-          b=s.index("function receiptImageToEscPos",a)
-          print(s[a:b])
-          h=s.index('ipcMain.handle("printer:print"')
-          e=s.index("app.whenReady()",h)
-          print(s[h:e])
+          for path in Path("app").rglob("*"):
+              if path.is_file() and path.suffix.lower() in {".js",".cjs",".mjs",".jsx",".ts",".tsx"}:
+                  try: s=path.read_text(encoding="utf-8")
+                  except: continue
+                  for needle in ["Obrigado pela preferência", "Obrigado pela preferencia"]:
+                      start=0
+                      while True:
+                          i=s.find(needle,start)
+                          if i<0: break
+                          print("\n=== FILE",path,"AT",i,"===")
+                          print(s[max(0,i-3000):min(len(s),i+3000)])
+                          start=i+len(needle)
           '@
           $code | python -
