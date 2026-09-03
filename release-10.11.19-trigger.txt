@@ -1,0 +1,1 @@
+Eletromix 10.11.19 — usa o papel do driver da ELGIN i8 e detecta modo offline.
