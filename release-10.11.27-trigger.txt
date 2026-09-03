@@ -1,0 +1,1 @@
+Executar testes de sucesso, lista vazia, erro e timeout antes de publicar.
