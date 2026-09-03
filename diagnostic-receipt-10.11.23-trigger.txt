@@ -1,0 +1,1 @@
+Extrair modelo real do comprovante e fluxo de impressão.
