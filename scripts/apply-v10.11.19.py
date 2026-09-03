@@ -35,6 +35,12 @@ new="""$handler=[System.Drawing.Printing.PrintPageEventHandler]{
 }"""
 if main.count(old)!=1: raise SystemExit("bloco PaperSize 10.11.18 não encontrado")
 main=main.replace(old,new,1)
+status_old="if(-not $document.PrinterSettings.IsValid){throw 'Driver da ELGIN i8 inválido ou indisponível.'}"
+status_new="""if(-not $document.PrinterSettings.IsValid){throw 'Driver da ELGIN i8 inválido ou indisponível.'}
+$printerStatus=Get-CimInstance Win32_Printer | Where-Object {$_.Name -eq $env:ELETROMIX_PRINTER} | Select-Object -First 1
+if($printerStatus -and $printerStatus.WorkOffline){throw 'A ELGIN i8 está marcada como Usar impressora offline no Windows. Desmarque essa opção e limpe a fila.'}"""
+if main.count(status_old)!=1: raise SystemExit("validação de driver não encontrada")
+main=main.replace(status_old,status_new,1)
 main=main.replace('mode:"windows-elgin-i8-gdi-papersize-fixed"','mode:"windows-elgin-i8-driver-paper"',1)
 write("electron/main.cjs",main)
 print("10.11.19: usa o papel já configurado no driver ELGIN i8, sem criar tamanho personalizado.")
