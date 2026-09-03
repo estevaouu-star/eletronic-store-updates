@@ -1,0 +1,1 @@
+Publicar versão com layout térmico corrigido e fluxo funcional preservado.
