@@ -24,20 +24,7 @@ insert=r'''    if(elginI8){
         if(!receipt)return false;
         const style=document.createElement('style');
         style.id='eletromix-elgin-layout-101121';
-        style.textContent=`
-          @page{margin:0!important}
-          html,body{margin:0!important;padding:0!important;width:100%!important;overflow:visible!important;background:#fff!important;color:#000!important}
-          .receipt{position:relative!important;left:auto!important;right:auto!important;top:0!important;width:64mm!important;max-width:64mm!important;min-width:0!important;margin:0 auto!important;padding:2mm 1.5mm 3mm!important;box-sizing:border-box!important;transform:none!important;overflow:hidden!important;font-family:Arial,sans-serif!important;font-size:12.5px!important;line-height:1.32!important;color:#000!important}
-          .receipt *{box-sizing:border-box!important;max-width:100%!important;color:#000!important}
-          .receipt img{display:block!important;max-width:42mm!important;max-height:14mm!important;width:auto!important;height:auto!important;object-fit:contain!important;margin:0 auto 2mm!important}
-          .receipt table{width:100%!important;max-width:100%!important;border-collapse:collapse!important;table-layout:fixed!important}
-          .receipt th,.receipt td{min-width:0!important;padding:2px 1px!important;overflow-wrap:anywhere!important;word-break:normal!important;vertical-align:top!important}
-          .receipt th:last-child,.receipt td:last-child{text-align:right!important}
-          .receipt [style*="display:flex"],.receipt [style*="display: flex"]{width:100%!important;max-width:100%!important;min-width:0!important;gap:4px!important}
-          .receipt [style*="display:flex"]>*,.receipt [style*="display: flex"]>*{min-width:0!important}
-          .receipt h1,.receipt h2,.receipt h3{text-align:center!important;margin:3px 0!important;line-height:1.2!important}
-          .receipt p{margin:2px 0!important}
-        `;
+        style.textContent="@page{margin:0!important}html,body{margin:0!important;padding:0!important;width:100%!important;overflow:visible!important;background:#fff!important;color:#000!important}.receipt{position:relative!important;left:auto!important;right:auto!important;top:0!important;width:64mm!important;max-width:64mm!important;min-width:0!important;margin:0 auto!important;padding:2mm 1.5mm 3mm!important;box-sizing:border-box!important;transform:none!important;overflow:hidden!important;font-family:Arial,sans-serif!important;font-size:12.5px!important;line-height:1.32!important;color:#000!important}.receipt *{box-sizing:border-box!important;max-width:100%!important;color:#000!important}.receipt img{display:block!important;max-width:42mm!important;max-height:14mm!important;width:auto!important;height:auto!important;object-fit:contain!important;margin:0 auto 2mm!important}.receipt table{width:100%!important;max-width:100%!important;border-collapse:collapse!important;table-layout:fixed!important}.receipt th,.receipt td{min-width:0!important;padding:2px 1px!important;overflow-wrap:anywhere!important;word-break:normal!important;vertical-align:top!important}.receipt th:last-child,.receipt td:last-child{text-align:right!important}.receipt [style*=\"display:flex\"],.receipt [style*=\"display: flex\"]{width:100%!important;max-width:100%!important;min-width:0!important;gap:4px!important}.receipt [style*=\"display:flex\"]>*,.receipt [style*=\"display: flex\"]>*{min-width:0!important}.receipt h1,.receipt h2,.receipt h3{text-align:center!important;margin:3px 0!important;line-height:1.2!important}.receipt p{margin:2px 0!important}";
         document.head.appendChild(style);
         let thanked=false;
         for(const node of receipt.querySelectorAll('p,div,span')){
