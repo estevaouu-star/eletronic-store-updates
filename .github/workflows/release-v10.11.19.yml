@@ -36,6 +36,7 @@ jobs:
           if(-not (Select-String app/electron/main.cjs -Pattern 'windows-elgin-i8-driver-paper' -SimpleMatch -Quiet)){throw 'Modo de papel do driver ELGIN i8 ausente'}
           if(Select-String app/electron/main.cjs -Pattern 'DefaultPageSettings.PaperSize=' -SimpleMatch -Quiet){throw 'Aplicativo ainda força tamanho de papel personalizado'}
           if(-not (Select-String app/electron/main.cjs -Pattern 'VisibleClipBounds.Width' -SimpleMatch -Quiet)){throw 'Ajuste à largura do driver ausente'}
+          if(-not (Select-String app/electron/main.cjs -Pattern 'WorkOffline' -SimpleMatch -Quiet)){throw 'Detecção de impressora offline ausente'}
           if(-not (Select-String app/electron/main.cjs -Pattern 'isVirtualPrinter101113' -SimpleMatch -Quiet)){throw 'Filtro virtual ausente'}
       - name: Compilar e gerar instalador
         working-directory: app
