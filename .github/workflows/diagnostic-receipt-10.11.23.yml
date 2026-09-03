@@ -1,0 +1,27 @@
+name: Diagnosticar modelo de comprovante 10.11.23
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['diagnostic-receipt-10.11.23-trigger.txt']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair e aplicar patches até 10.11.23
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "Eletromix-v10.1.0-source-for-release.zip" -DestinationPath app
+          $wf = Get-Content '.github/workflows/release-v10.10.51.yml' -Raw
+          $m = [regex]::Match($wf, '\$base\s*=\s*@\((.*?)\)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+          if(-not $m.Success){ throw 'Lista base nao encontrada' }
+          $files = [regex]::Matches($m.Groups[1].Value, "'([^']+)'\s*,?") | ForEach-Object {$_.Groups[1].Value}
+          foreach($file in $files){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+          foreach($file in @('apply-v10.10.52.py','apply-v10.11.00.py','apply-v10.11.01.py','apply-v10.11.02.py','apply-v10.11.03.py','apply-v10.11.04.py','apply-v10.11.05.py','apply-v10.11.06.py','apply-v10.11.07.py','apply-v10.11.08.py','apply-v10.11.09.py','apply-v10.11.10.py','apply-v10.11.11.py','apply-v10.11.12.py','apply-v10.11.13.py','apply-v10.11.14.py','apply-v10.11.15.py','apply-v10.11.16.py','apply-v10.11.17.py','apply-v10.11.18.py','apply-v10.11.19.py','apply-v10.11.20.py','apply-v10.11.21.py','apply-v10.11.22.py','apply-v10.11.23.py')){python "scripts/$file";if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}}
+      - name: Mostrar gerador e fluxo exatos
+        shell: pwsh
+        run: |
+          python -c "from pathlib import Path; s=Path('app/electron/main.cjs').read_text(encoding='utf-8'); a=s.index('function receiptPrintHtml'); b=s.index('function receiptImageToEscPos',a); print(s[a:b]); h=s.index('ipcMain.handle(\"printer:print\"'); e=s.index('app.whenReady()',h); print(s[h:e])"
