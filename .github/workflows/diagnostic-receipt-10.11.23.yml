@@ -24,4 +24,14 @@ jobs:
       - name: Mostrar gerador e fluxo exatos
         shell: pwsh
         run: |
-          python -c "from pathlib import Path; s=Path('app/electron/main.cjs').read_text(encoding='utf-8'); a=s.index('function receiptPrintHtml'); b=s.index('function receiptImageToEscPos',a); print(s[a:b]); h=s.index('ipcMain.handle(\"printer:print\"'); e=s.index('app.whenReady()',h); print(s[h:e])"
+          $code = @'
+          from pathlib import Path
+          s=Path("app/electron/main.cjs").read_text(encoding="utf-8")
+          a=s.index("function receiptPrintHtml")
+          b=s.index("function receiptImageToEscPos",a)
+          print(s[a:b])
+          h=s.index('ipcMain.handle("printer:print"')
+          e=s.index("app.whenReady()",h)
+          print(s[h:e])
+          '@
+          $code | python -
