@@ -1,0 +1,1 @@
+Validar detecção Win32, seleção ELGIN, envio e layout antes de publicar.
