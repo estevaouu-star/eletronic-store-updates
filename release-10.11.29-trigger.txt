@@ -1,2 +1,3 @@
 Montar exclusivamente a 10.11.20 e alterar somente o número para 10.11.29.
 Reexecução controlada: 2026-09-08.
+Sintaxe validada; iniciar compilação final.
