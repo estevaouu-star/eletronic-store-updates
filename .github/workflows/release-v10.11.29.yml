@@ -37,9 +37,7 @@ jobs:
           if($html -cne $baseHtml){throw 'index.html possui alteração além da versão'}
           $pkg=Get-Content app/package.json -Raw|ConvertFrom-Json
           if($pkg.version -ne '10.11.29'){throw 'Número de versão incorreto'}
-          $source=(Get-Content app/electron/main.cjs -Raw)+"
-"+(Get-Content app/public/app.js -Raw)+"
-"+(Get-Content app/package.json -Raw)
+          $source=(Get-Content app/electron/main.cjs -Raw)+(Get-Content app/public/app.js -Raw)+(Get-Content app/package.json -Raw)
           if($source -match 'pnputil|PrintUIEntry|Add-PrinterDriver|Remove-PrinterDriver'){throw 'Comando de alteração de driver encontrado'}
           node --check app/electron/main.cjs
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
